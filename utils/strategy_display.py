@@ -5,6 +5,13 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 
+def strategy_label_from_entry(entry_price: float, *, hold_to_settle: bool = True) -> str:
+    cents = round(float(entry_price) * 100)
+    if hold_to_settle:
+        return f"Buy ≥ {cents}¢ / Hold to Settle"
+    return f"Buy ≥ {cents}¢"
+
+
 def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -> str:
     key = (raw or "idle").strip().lower()
     if stopped_out and not has_position:
@@ -12,7 +19,7 @@ def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -
     mapping = {
         "idle": "WAITING FOR ENTRY",
         "waiting": "WAITING FOR ENTRY",
-        "entry_eligible": "ENDGAME SIGNAL — BUY IMPLIED",
+        "entry_eligible": "ENTRY ELIGIBLE — BUY",
         "entry_pending": "BUY ORDER SUBMITTED",
         "in_position": "POSITION OPEN",
         "holding_to_settle": "HOLDING TO SETTLE",
@@ -33,7 +40,11 @@ def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -
 
 def enrich_dashboard_payload(d: Mapping[str, Any]) -> dict[str, Any]:
     out = dict(d)
-    out["strategy_name"] = "Endgame Confirmed Move / Hold to Settle"
+    entry = float(out.get("entry_price") or out.get("minimum_entry_price") or 0.97)
+    hold = bool(out.get("hold_to_settle", True))
+    label = strategy_label_from_entry(entry, hold_to_settle=hold)
+    out["strategy_name"] = label
+    out["strategy_label"] = label
     out["execution_type"] = "FOK"
     stopped = bool(out.get("market_stopped_out"))
     has_pos = float(out.get("position_size") or 0) > 0

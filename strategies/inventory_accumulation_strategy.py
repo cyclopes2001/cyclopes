@@ -107,18 +107,12 @@ class DirectionalFokStrategy:
     def _market_ready(self, worker: "MarketWorker") -> Optional[str]:
         from bot import is_locked_price
 
-        if getattr(worker, "_ws_market_data_stale", False):
-            return "REJECT_STALE_ORDERBOOK"
         if not worker.active_market:
             return "no_active_market"
         if not worker.canonical_market_id():
             return "missing_condition_id"
         if worker.market_seconds_left() <= 0:
             return "market_closed"
-        cfg = worker.worker_config
-        age = worker.max_quote_age_seconds()
-        if age is not None and age > cfg.max_quote_age_seconds:
-            return "REJECT_STALE_ORDERBOOK"
         y = float(worker.best_ask("YES"))
         n = float(worker.best_ask("NO"))
         if y <= 0 and n <= 0:

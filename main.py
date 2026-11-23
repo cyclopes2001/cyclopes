@@ -158,17 +158,21 @@ def _app_config_payload() -> dict:
         "market_interval":          "5m",
         "trading_assets_label":     trading_assets_label(),
         "strategy":                 "high_confidence_entry",
-        "strategy_label":           "High-Confidence Ask Entry / Hold to Settle",
+        "strategy_label":           "Buy ≥ 97¢ / Hold to Settle",
     }
     if wc0 is not None:
+        from utils.strategy_display import strategy_label_from_entry
+
+        entry_c = round(wc0.entry_price * 100, 2)
         payload.update({
-            "minimum_entry_price_c": round(wc0.entry_price * 100, 2),
-            "entry_price_c": round(wc0.entry_price * 100, 2),
+            "strategy_label": strategy_label_from_entry(
+                wc0.entry_price, hold_to_settle=wc0.hold_to_settle,
+            ),
+            "minimum_entry_price_c": entry_c,
+            "entry_price_c": entry_c,
             "entry_window_seconds": wc0.entry_window_seconds,
             "stop_loss_pct": wc0.stop_loss_pct,
             "take_profit_pct": wc0.take_profit_pct,
-            "endgame_max_seconds_left": wc0.endgame_max_seconds_left,
-            "endgame_min_seconds_left": wc0.endgame_min_seconds_left,
             "hold_to_settle": wc0.hold_to_settle,
             "order_size": wc0.order_size_max,
             "execution_type": "FOK",
@@ -2302,8 +2306,8 @@ function renderCard(bot){
   const cumPos=(bot.cumulative_pnl||0)>=0;
   const inProfit=hasInv&&(bot.pnl_dollars||0)>0;
   const inLoss=hasInv&&(bot.pnl_dollars||0)<0;
-  const stratLabel=bot.strategy_name||bot.strategy_label||'Endgame Confirmed Move / Hold to Settle';
-  const entryC=Number(bot.minimum_entry_price_c||bot.max_entry_price_c||bot.configured_entry_price_c||50);
+  const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||97);
+  const stratLabel=bot.strategy_name||bot.strategy_label||`Buy ≥ ${entryC.toFixed(0)}¢ / Hold to Settle`;
   const limitC=Number(bot.buy_limit_price_c||0);
   const stopPct=Number(bot.stop_loss_pct||0.50);
   const tpPct=Number(bot.take_profit_pct||0.50);
@@ -2369,7 +2373,7 @@ function renderCard(bot){
           ${sigIcon(signal)} ${signal}
         </span>
         <div class="text-xs text-zinc-400 font-mono">
-          entry ask &gt; <span class="text-orange-400">${entryC.toFixed(1)}¢</span>
+          ask ≥ <span class="text-orange-400">${entryC.toFixed(0)}¢</span>
           &nbsp;· stop <span class="text-red-400">${(stopPct*100).toFixed(0)}%</span>
           &nbsp;· TP <span class="text-accent">${(tpPct*100).toFixed(0)}%</span>
         </div>
@@ -2380,7 +2384,7 @@ function renderCard(bot){
         <span>Execution: ${execType} · ${orderSz?orderSz.toFixed(0)+' sh':'—'}</span>
         <span>UP ask: ${yesAskC?yesAskC.toFixed(1)+'c':'—'}</span>
         <span>DOWN ask: ${noAskC?noAskC.toFixed(1)+'c':'—'}</span>
-        <span>Entry: ask &gt; ${entryC.toFixed(1)}c</span>
+        <span>Entry floor: ask ≥ ${entryC.toFixed(0)}c</span>
         <span>Entry window: ${entryWindowLabel}</span>
         <span>Liquidity: ${Number(bot.liquidity_available_shares||0).toFixed(1)} / ${orderSz.toFixed(1)} sh</span>
         <span>Buy limit: ${limitC?limitC.toFixed(1)+'c':'—'}</span>

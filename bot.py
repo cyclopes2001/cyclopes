@@ -3390,7 +3390,6 @@ class MarketWorker:
                 print("\n⚠️ Connection lost. Reconnecting in 3s...")
                 self._book_cache.clear()
                 self._ws_market_data_stale = True
-                self.dashboard["entry_block_reason"] = "REJECT_STALE_ORDERBOOK"
                 await self.cancel_all_open_orders()
                 await asyncio.sleep(3)
                 continue
@@ -3939,13 +3938,20 @@ class MarketWorker:
 
         min_res = self.resolved_minimum_entry_price()
         trade_phase = self.dashboard.get("strategy_state", "idle")
+        from utils.strategy_display import strategy_label_from_entry
+
+        strat_label = strategy_label_from_entry(
+            min_res.minimum_price,
+            hold_to_settle=bool(getattr(wc, "hold_to_settle", True)),
+        )
         payload = {
             "asset": self.asset_type.upper(),
             "window": self.window_slug,
             "market_id": self.canonical_market_id() or "",
-            "strategy": "directional_fok",
-            "strategy_label": "Above 50¢ Entry / 50% SL / 50% TP",
-            "strategy_name": "Above 50¢ Entry / 50% SL / 50% TP",
+            "strategy": "high_confidence_entry",
+            "strategy_label": strat_label,
+            "strategy_name": strat_label,
+            "hold_to_settle": bool(getattr(wc, "hold_to_settle", True)),
             "trade_phase": trade_phase,
             "strategy_state": trade_phase,
             "minimum_entry_price": min_res.minimum_price,
@@ -4189,11 +4195,11 @@ class MarketWorker:
     async def start(self):
         """Per-worker trading loop for one (asset, window) pair."""
         wc = self.worker_config
-        print(f"🤖 EmilianoBot — Above 50¢ / 50% SL / 50% TP (FOK) → "
+        print(f"🤖 EmilianoBot — Buy ≥ {wc.entry_price * 100:.0f}¢ / Hold to Settle (FOK) → "
               f"{self.asset_type.upper()} {self.window_slug} markets...")
         print(f"  Market interval   : {wc.window} ({wc.interval_seconds}s)")
         print(f"  Listener window   : final {wc.listener_activate_secs}s")
-        print(f"  Entry floor       : ask > {wc.entry_price:.2f}")
+        print(f"  Entry floor       : ask ≥ {wc.entry_price:.2f}")
         print(f"  Stop loss         : {wc.stop_loss_pct:.0%} from confirmed average fill")
         print(f"  Take profit       : {wc.take_profit_pct:.0%} from confirmed average fill")
         print(f"  Minimum depth     : {wc.min_orderbook_depth:.1f} shares")
@@ -4318,16 +4324,16 @@ def create_dashboard(bots):
         listener_cd = bot.get_listener_countdown()
 
         display_status = d.get("strategy_display_state", d.get("status", "WAITING FOR ENTRY"))
-        entry_c = d.get("max_entry_price_c", d.get("minimum_entry_price_c", 50))
+        entry_c = d.get("minimum_entry_price_c", d.get("entry_price_c", 97))
         stop_pct = round(float(d.get("stop_loss_pct", 0.5)) * 100)
-        tp_pct = round(float(d.get("take_profit_pct", 1.0)) * 100)
+        tp_pct = round(float(d.get("take_profit_pct", 0.5)) * 100)
         side = d.get("position_side") or "—"
         limit_c = d.get("buy_limit_price_c", 0)
         fill_c = d.get("entry_fill_price_c", 0)
         ew = bot.worker_config.entry_window_seconds
         ew_label = f"last {ew}s" if ew > 0 else "full market"
         strategy_text = (
-            f"entry>{entry_c}c | {ew_label} | stop {stop_pct}% | TP {tp_pct}% | "
+            f"ask≥{entry_c}c | {ew_label} | stop {stop_pct}% | TP {tp_pct}% | "
             f"FOK | side={side} | fill={fill_c}c"
         )
 

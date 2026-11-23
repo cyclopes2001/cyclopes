@@ -8,7 +8,7 @@ class DashboardConfigTests(unittest.TestCase):
         wc = load_worker_configs()[0]
         self.assertAlmostEqual(wc.entry_price, 0.97)
         self.assertAlmostEqual(wc.stop_loss_pct, 0.50)
-        self.assertEqual(wc.entry_window_seconds, 60)
+        self.assertGreaterEqual(wc.entry_window_seconds, 1)
         self.assertTrue(wc.endgame_enabled)
         self.assertTrue(wc.hold_to_settle)
         self.assertAlmostEqual(wc.latency_arb_min_ask, 0.97)

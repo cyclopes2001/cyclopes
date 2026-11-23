@@ -1,0 +1,539 @@
+2026-11-22 00:00:17,129 {"event": "trade", "ts": 1795302017.1296434, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.53, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:00PM-6:05PM ET", "window": "5m"}
+2026-11-22 00:00:20,341 {"event": "trade", "ts": 1795302020.3412242, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.55, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:00PM-6:05PM ET", "window": "5m"}
+2026-11-22 00:00:44,270 {"event": "trade", "ts": 1795302044.2698443, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.73, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:00PM-6:05PM ET", "window": "5m"}
+2026-11-22 00:01:08,007 {"event": "trade", "ts": 1795302068.0075533, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.39, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:00PM-6:05PM ET", "window": "5m"}
+2026-11-22 00:01:18,411 {"event": "quote_poll_error", "ts": 1795302078.4112086, "error": "'trades'"}
+2026-11-22 00:05:20,317 {"event": "trade", "ts": 1795302320.3169737, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.62, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:05PM-6:10PM ET", "window": "5m"}
+2026-11-22 00:05:24,009 {"event": "trade", "ts": 1795302324.0097716, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.71, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:05PM-6:10PM ET", "window": "5m"}
+2026-11-22 00:06:43,509 {"event": "trade", "ts": 1795302403.5092375, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.8100000000000002, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:05PM-6:10PM ET", "window": "5m"}
+2026-11-22 00:06:54,337 {"event": "quote_poll_error", "ts": 1795302414.3377347, "error": "'trades'"}
+2026-11-22 00:07:11,019 {"event": "trade", "ts": 1795302431.019381, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.95, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:05PM-6:10PM ET", "window": "5m"}
+2026-11-22 00:07:22,873 {"event": "quote_poll_error", "ts": 1795302442.8729413, "error": "'trades'"}
+2026-11-22 00:10:22,771 {"event": "trade", "ts": 1795302622.77144, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.59, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:10PM-6:15PM ET", "window": "5m"}
+2026-11-22 00:10:26,199 {"event": "trade", "ts": 1795302626.1994224, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.55, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:10PM-6:15PM ET", "window": "5m"}
+2026-11-22 00:10:58,307 {"event": "trade", "ts": 1795302658.3073888, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.8299999999999998, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:10PM-6:15PM ET", "window": "5m"}
+2026-11-22 00:11:08,997 {"event": "quote_poll_error", "ts": 1795302668.9977608, "error": "'trades'"}
+2026-11-22 00:11:09,751 {"event": "trade", "ts": 1795302669.750885, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.36, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:10PM-6:15PM ET", "window": "5m"}
+2026-11-22 00:11:20,540 {"event": "quote_poll_error", "ts": 1795302680.5405202, "error": "'trades'"}
+2026-11-22 00:15:20,913 {"event": "trade", "ts": 1795302920.9109075, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.52, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:15PM-6:20PM ET", "window": "5m"}
+2026-11-22 00:15:24,668 {"event": "trade", "ts": 1795302924.6684115, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.53, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:15PM-6:20PM ET", "window": "5m"}
+2026-11-22 00:16:05,099 {"event": "trade", "ts": 1795302965.0989335, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.42000000000000004, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:15PM-6:20PM ET", "window": "5m"}
+2026-11-22 00:16:16,012 {"event": "quote_poll_error", "ts": 1795302976.0126193, "error": "'trades'"}
+2026-11-22 00:16:30,419 {"event": "trade", "ts": 1795302990.4190743, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.74, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:15PM-6:20PM ET", "window": "5m"}
+2026-11-22 00:16:40,451 {"event": "quote_poll_error", "ts": 1795303000.4517837, "error": "'trades'"}
+2026-11-22 00:20:36,648 {"event": "trade", "ts": 1795303236.6483238, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.78, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 21, 6:20PM-6:25PM ET", "window": "5m"}
+2026-11-22 00:20:42,432 {"event": "trade", "ts": 1795303242.432652, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.63, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 21, 6:20PM-6:25PM ET", "window": "5m"}
+2026-11-22 00:22:13,318 {"event": "order_book_fetch_failed", "ts": 1795303333.3181896, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:24,677 {"event": "order_book_fetch_failed", "ts": 1795303344.6775804, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:36,045 {"event": "order_book_fetch_failed", "ts": 1795303356.045912, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:36,083 {"event": "order_book_fetch_failed", "ts": 1795303356.0831015, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:36,086 {"event": "order_book_fetch_failed", "ts": 1795303356.0864363, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:36,089 {"event": "order_book_fetch_failed", "ts": 1795303356.0892189, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:36,092 {"event": "order_book_fetch_failed", "ts": 1795303356.0927303, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:37,065 {"event": "order_book_fetch_failed", "ts": 1795303357.0658417, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:37,069 {"event": "order_book_fetch_failed", "ts": 1795303357.0690784, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:37,116 {"event": "order_book_fetch_failed", "ts": 1795303357.1158202, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:37,122 {"event": "order_book_fetch_failed", "ts": 1795303357.1223004, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:38,078 {"event": "order_book_fetch_failed", "ts": 1795303358.0787115, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:38,081 {"event": "order_book_fetch_failed", "ts": 1795303358.0812724, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:38,158 {"event": "order_book_fetch_failed", "ts": 1795303358.1583283, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:38,162 {"event": "order_book_fetch_failed", "ts": 1795303358.161908, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:39,096 {"event": "order_book_fetch_failed", "ts": 1795303359.0960164, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:39,101 {"event": "order_book_fetch_failed", "ts": 1795303359.1017032, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:39,175 {"event": "order_book_fetch_failed", "ts": 1795303359.1752903, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:39,181 {"event": "order_book_fetch_failed", "ts": 1795303359.1816459, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:40,136 {"event": "order_book_fetch_failed", "ts": 1795303360.1366959, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:40,146 {"event": "order_book_fetch_failed", "ts": 1795303360.1463728, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:40,219 {"event": "order_book_fetch_failed", "ts": 1795303360.2192628, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:40,224 {"event": "order_book_fetch_failed", "ts": 1795303360.2246037, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:41,169 {"event": "order_book_fetch_failed", "ts": 1795303361.169211, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:41,171 {"event": "order_book_fetch_failed", "ts": 1795303361.1713686, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:41,265 {"event": "order_book_fetch_failed", "ts": 1795303361.265067, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:41,270 {"event": "order_book_fetch_failed", "ts": 1795303361.2704935, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:42,192 {"event": "order_book_fetch_failed", "ts": 1795303362.1927922, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:42,195 {"event": "order_book_fetch_failed", "ts": 1795303362.1958225, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:42,301 {"event": "order_book_fetch_failed", "ts": 1795303362.3010354, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:42,305 {"event": "order_book_fetch_failed", "ts": 1795303362.3053987, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:43,212 {"event": "order_book_fetch_failed", "ts": 1795303363.2119553, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:43,217 {"event": "order_book_fetch_failed", "ts": 1795303363.217795, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:43,333 {"event": "order_book_fetch_failed", "ts": 1795303363.3332636, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:43,338 {"event": "order_book_fetch_failed", "ts": 1795303363.3380573, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:44,235 {"event": "order_book_fetch_failed", "ts": 1795303364.23568, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:44,240 {"event": "order_book_fetch_failed", "ts": 1795303364.2400634, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:44,365 {"event": "order_book_fetch_failed", "ts": 1795303364.365018, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:44,370 {"event": "order_book_fetch_failed", "ts": 1795303364.370088, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:45,255 {"event": "order_book_fetch_failed", "ts": 1795303365.255862, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:45,259 {"event": "order_book_fetch_failed", "ts": 1795303365.2589495, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:45,394 {"event": "order_book_fetch_failed", "ts": 1795303365.3947594, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:45,399 {"event": "order_book_fetch_failed", "ts": 1795303365.3993487, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,449 {"event": "order_book_fetch_failed", "ts": 1795303367.449435, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,453 {"event": "order_book_fetch_failed", "ts": 1795303367.4538019, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,458 {"event": "order_book_fetch_failed", "ts": 1795303367.4588397, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,462 {"event": "order_book_fetch_failed", "ts": 1795303367.4624562, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,465 {"event": "order_book_fetch_failed", "ts": 1795303367.4657695, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:47,468 {"event": "order_book_fetch_failed", "ts": 1795303367.4683552, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:48,463 {"event": "order_book_fetch_failed", "ts": 1795303368.463716, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:48,467 {"event": "order_book_fetch_failed", "ts": 1795303368.4673595, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:48,494 {"event": "order_book_fetch_failed", "ts": 1795303368.4937851, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:48,496 {"event": "order_book_fetch_failed", "ts": 1795303368.4965901, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:49,488 {"event": "order_book_fetch_failed", "ts": 1795303369.487255, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:49,497 {"event": "order_book_fetch_failed", "ts": 1795303369.4970715, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:49,528 {"event": "order_book_fetch_failed", "ts": 1795303369.5285811, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:49,535 {"event": "order_book_fetch_failed", "ts": 1795303369.5355585, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:50,518 {"event": "order_book_fetch_failed", "ts": 1795303370.5184724, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:50,521 {"event": "order_book_fetch_failed", "ts": 1795303370.5210893, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:50,586 {"event": "order_book_fetch_failed", "ts": 1795303370.5860987, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:50,596 {"event": "order_book_fetch_failed", "ts": 1795303370.5965056, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:51,532 {"event": "order_book_fetch_failed", "ts": 1795303371.5319533, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:51,548 {"event": "order_book_fetch_failed", "ts": 1795303371.5481496, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:51,639 {"event": "order_book_fetch_failed", "ts": 1795303371.6389482, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:51,641 {"event": "order_book_fetch_failed", "ts": 1795303371.6412678, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,818 {"event": "order_book_fetch_failed", "ts": 1795303378.8183355, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,827 {"event": "order_book_fetch_failed", "ts": 1795303378.8270783, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,840 {"event": "order_book_fetch_failed", "ts": 1795303378.8399897, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,846 {"event": "order_book_fetch_failed", "ts": 1795303378.8457763, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,853 {"event": "order_book_fetch_failed", "ts": 1795303378.852879, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:58,858 {"event": "order_book_fetch_failed", "ts": 1795303378.858037, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:59,843 {"event": "order_book_fetch_failed", "ts": 1795303379.8436887, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:59,848 {"event": "order_book_fetch_failed", "ts": 1795303379.8481913, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:59,889 {"event": "order_book_fetch_failed", "ts": 1795303379.8893774, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:22:59,895 {"event": "order_book_fetch_failed", "ts": 1795303379.8955069, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:00,870 {"event": "order_book_fetch_failed", "ts": 1795303380.8699155, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:00,873 {"event": "order_book_fetch_failed", "ts": 1795303380.8731368, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:00,931 {"event": "order_book_fetch_failed", "ts": 1795303380.9312885, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:00,933 {"event": "order_book_fetch_failed", "ts": 1795303380.933515, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:01,910 {"event": "order_book_fetch_failed", "ts": 1795303381.9099576, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:01,913 {"event": "order_book_fetch_failed", "ts": 1795303381.9132135, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:01,955 {"event": "order_book_fetch_failed", "ts": 1795303381.9549787, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:01,958 {"event": "order_book_fetch_failed", "ts": 1795303381.9582462, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:02,934 {"event": "order_book_fetch_failed", "ts": 1795303382.934073, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:02,940 {"event": "order_book_fetch_failed", "ts": 1795303382.9403408, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:02,981 {"event": "order_book_fetch_failed", "ts": 1795303382.9810169, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:02,984 {"event": "order_book_fetch_failed", "ts": 1795303382.9841433, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:03,949 {"event": "order_book_fetch_failed", "ts": 1795303383.9492292, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:03,951 {"event": "order_book_fetch_failed", "ts": 1795303383.9516196, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:04,036 {"event": "order_book_fetch_failed", "ts": 1795303384.0359125, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:04,053 {"event": "order_book_fetch_failed", "ts": 1795303384.053157, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:04,973 {"event": "order_book_fetch_failed", "ts": 1795303384.973116, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:04,979 {"event": "order_book_fetch_failed", "ts": 1795303384.978973, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:05,103 {"event": "order_book_fetch_failed", "ts": 1795303385.1030366, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:05,105 {"event": "order_book_fetch_failed", "ts": 1795303385.1051996, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:05,988 {"event": "order_book_fetch_failed", "ts": 1795303385.9886172, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:05,992 {"event": "order_book_fetch_failed", "ts": 1795303385.9922283, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:06,129 {"event": "order_book_fetch_failed", "ts": 1795303386.129241, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:06,133 {"event": "order_book_fetch_failed", "ts": 1795303386.1329672, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:07,005 {"event": "order_book_fetch_failed", "ts": 1795303387.0056677, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:07,009 {"event": "order_book_fetch_failed", "ts": 1795303387.0090709, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:07,158 {"event": "order_book_fetch_failed", "ts": 1795303387.158574, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:07,161 {"event": "order_book_fetch_failed", "ts": 1795303387.1610286, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:08,018 {"event": "order_book_fetch_failed", "ts": 1795303388.018635, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:08,021 {"event": "order_book_fetch_failed", "ts": 1795303388.0211034, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:08,173 {"event": "order_book_fetch_failed", "ts": 1795303388.1731968, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:08,176 {"event": "order_book_fetch_failed", "ts": 1795303388.17631, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:09,045 {"event": "order_book_fetch_failed", "ts": 1795303389.0454588, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:09,050 {"event": "order_book_fetch_failed", "ts": 1795303389.050602, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:09,216 {"event": "order_book_fetch_failed", "ts": 1795303389.2158751, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:09,221 {"event": "order_book_fetch_failed", "ts": 1795303389.2211022, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:10,056 {"event": "order_book_fetch_failed", "ts": 1795303390.0568745, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:10,059 {"event": "order_book_fetch_failed", "ts": 1795303390.0590665, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:10,244 {"event": "order_book_fetch_failed", "ts": 1795303390.2444265, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:10,247 {"event": "order_book_fetch_failed", "ts": 1795303390.2476099, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:11,073 {"event": "order_book_fetch_failed", "ts": 1795303391.0735972, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:11,078 {"event": "order_book_fetch_failed", "ts": 1795303391.0786629, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:11,261 {"event": "order_book_fetch_failed", "ts": 1795303391.2618513, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:11,267 {"event": "order_book_fetch_failed", "ts": 1795303391.2679102, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:12,087 {"event": "order_book_fetch_failed", "ts": 1795303392.0871441, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:12,089 {"event": "order_book_fetch_failed", "ts": 1795303392.0892446, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:12,306 {"event": "order_book_fetch_failed", "ts": 1795303392.3061786, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:12,309 {"event": "order_book_fetch_failed", "ts": 1795303392.3091187, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:13,107 {"event": "order_book_fetch_failed", "ts": 1795303393.1063242, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:13,123 {"event": "order_book_fetch_failed", "ts": 1795303393.1237767, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:13,338 {"event": "order_book_fetch_failed", "ts": 1795303393.3381786, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:13,343 {"event": "order_book_fetch_failed", "ts": 1795303393.343054, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:14,134 {"event": "order_book_fetch_failed", "ts": 1795303394.1338232, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:14,136 {"event": "order_book_fetch_failed", "ts": 1795303394.1368897, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:14,366 {"event": "order_book_fetch_failed", "ts": 1795303394.3666832, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:14,369 {"event": "order_book_fetch_failed", "ts": 1795303394.3692641, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:15,145 {"event": "order_book_fetch_failed", "ts": 1795303395.1457927, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:15,151 {"event": "order_book_fetch_failed", "ts": 1795303395.1515455, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,764 {"event": "order_book_fetch_failed", "ts": 1795303406.7645683, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,769 {"event": "order_book_fetch_failed", "ts": 1795303406.7694325, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,776 {"event": "order_book_fetch_failed", "ts": 1795303406.7758892, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,783 {"event": "order_book_fetch_failed", "ts": 1795303406.7831607, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,818 {"event": "order_book_fetch_failed", "ts": 1795303406.8178916, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:26,835 {"event": "order_book_fetch_failed", "ts": 1795303406.8349044, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:27,815 {"event": "order_book_fetch_failed", "ts": 1795303407.815212, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:27,817 {"event": "order_book_fetch_failed", "ts": 1795303407.817819, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:27,820 {"event": "order_book_fetch_failed", "ts": 1795303407.8203428, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:27,823 {"event": "order_book_fetch_failed", "ts": 1795303407.8233826, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:28,841 {"event": "order_book_fetch_failed", "ts": 1795303408.8418078, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:28,844 {"event": "order_book_fetch_failed", "ts": 1795303408.8446724, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:28,848 {"event": "order_book_fetch_failed", "ts": 1795303408.8484411, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:28,852 {"event": "order_book_fetch_failed", "ts": 1795303408.8525255, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:29,874 {"event": "order_book_fetch_failed", "ts": 1795303409.8746157, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:29,879 {"event": "order_book_fetch_failed", "ts": 1795303409.8797324, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:29,887 {"event": "order_book_fetch_failed", "ts": 1795303409.8871279, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:29,891 {"event": "order_book_fetch_failed", "ts": 1795303409.891795, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:30,926 {"event": "order_book_fetch_failed", "ts": 1795303410.9258747, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:30,931 {"event": "order_book_fetch_failed", "ts": 1795303410.93136, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:30,938 {"event": "order_book_fetch_failed", "ts": 1795303410.9383538, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:30,944 {"event": "order_book_fetch_failed", "ts": 1795303410.9445992, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:31,974 {"event": "order_book_fetch_failed", "ts": 1795303411.974623, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:31,979 {"event": "order_book_fetch_failed", "ts": 1795303411.9795132, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:31,986 {"event": "order_book_fetch_failed", "ts": 1795303411.986758, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:31,991 {"event": "order_book_fetch_failed", "ts": 1795303411.9912841, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:33,026 {"event": "order_book_fetch_failed", "ts": 1795303413.0267851, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:33,038 {"event": "order_book_fetch_failed", "ts": 1795303413.038286, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:33,046 {"event": "order_book_fetch_failed", "ts": 1795303413.0467277, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:33,055 {"event": "order_book_fetch_failed", "ts": 1795303413.0551007, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:34,090 {"event": "order_book_fetch_failed", "ts": 1795303414.0896227, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:34,098 {"event": "order_book_fetch_failed", "ts": 1795303414.0984135, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:34,105 {"event": "order_book_fetch_failed", "ts": 1795303414.1050537, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:45,480 {"event": "order_book_fetch_failed", "ts": 1795303425.4804552, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:45,499 {"event": "order_book_fetch_failed", "ts": 1795303425.4990413, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:45,504 {"event": "order_book_fetch_failed", "ts": 1795303425.504545, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:45,514 {"event": "order_book_fetch_failed", "ts": 1795303425.5138495, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:45,520 {"event": "order_book_fetch_failed", "ts": 1795303425.520398, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:46,498 {"event": "order_book_fetch_failed", "ts": 1795303426.498828, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:46,502 {"event": "order_book_fetch_failed", "ts": 1795303426.5022316, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:46,506 {"event": "order_book_fetch_failed", "ts": 1795303426.506236, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:46,516 {"event": "order_book_fetch_failed", "ts": 1795303426.516224, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:47,533 {"event": "order_book_fetch_failed", "ts": 1795303427.533813, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:47,538 {"event": "order_book_fetch_failed", "ts": 1795303427.5379348, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:47,545 {"event": "order_book_fetch_failed", "ts": 1795303427.5455468, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:47,555 {"event": "order_book_fetch_failed", "ts": 1795303427.5549574, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:48,574 {"event": "order_book_fetch_failed", "ts": 1795303428.5742042, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:48,578 {"event": "order_book_fetch_failed", "ts": 1795303428.5785978, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:48,588 {"event": "order_book_fetch_failed", "ts": 1795303428.5883417, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:48,595 {"event": "order_book_fetch_failed", "ts": 1795303428.5953562, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:49,634 {"event": "order_book_fetch_failed", "ts": 1795303429.6341517, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:49,636 {"event": "order_book_fetch_failed", "ts": 1795303429.636884, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:49,640 {"event": "order_book_fetch_failed", "ts": 1795303429.6405532, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:49,644 {"event": "order_book_fetch_failed", "ts": 1795303429.6444755, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:50,664 {"event": "order_book_fetch_failed", "ts": 1795303430.664286, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:50,669 {"event": "order_book_fetch_failed", "ts": 1795303430.6690943, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:50,676 {"event": "order_book_fetch_failed", "ts": 1795303430.676744, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:50,681 {"event": "order_book_fetch_failed", "ts": 1795303430.681423, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:51,707 {"event": "order_book_fetch_failed", "ts": 1795303431.7068653, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:51,713 {"event": "order_book_fetch_failed", "ts": 1795303431.7137291, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:51,721 {"event": "order_book_fetch_failed", "ts": 1795303431.7215106, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:51,727 {"event": "order_book_fetch_failed", "ts": 1795303431.727751, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:52,766 {"event": "order_book_fetch_failed", "ts": 1795303432.766081, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:52,770 {"event": "order_book_fetch_failed", "ts": 1795303432.770784, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:52,777 {"event": "order_book_fetch_failed", "ts": 1795303432.7776525, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:52,783 {"event": "order_book_fetch_failed", "ts": 1795303432.7836962, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:53,816 {"event": "order_book_fetch_failed", "ts": 1795303433.8159935, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:53,820 {"event": "order_book_fetch_failed", "ts": 1795303433.820596, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:53,827 {"event": "order_book_fetch_failed", "ts": 1795303433.827576, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:53,832 {"event": "order_book_fetch_failed", "ts": 1795303433.832165, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:54,863 {"event": "order_book_fetch_failed", "ts": 1795303434.8631911, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:54,869 {"event": "order_book_fetch_failed", "ts": 1795303434.869626, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:54,877 {"event": "order_book_fetch_failed", "ts": 1795303434.8773935, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:54,882 {"event": "order_book_fetch_failed", "ts": 1795303434.8822908, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:55,908 {"event": "order_book_fetch_failed", "ts": 1795303435.908822, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:55,911 {"event": "order_book_fetch_failed", "ts": 1795303435.9114015, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:55,913 {"event": "order_book_fetch_failed", "ts": 1795303435.9136307, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:55,916 {"event": "order_book_fetch_failed", "ts": 1795303435.9159813, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:56,927 {"event": "order_book_fetch_failed", "ts": 1795303436.9269989, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:56,929 {"event": "order_book_fetch_failed", "ts": 1795303436.9294121, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:56,931 {"event": "order_book_fetch_failed", "ts": 1795303436.9317014, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:56,934 {"event": "order_book_fetch_failed", "ts": 1795303436.934576, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:57,956 {"event": "order_book_fetch_failed", "ts": 1795303437.9567933, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:57,961 {"event": "order_book_fetch_failed", "ts": 1795303437.9612322, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:57,968 {"event": "order_book_fetch_failed", "ts": 1795303437.967984, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:57,975 {"event": "order_book_fetch_failed", "ts": 1795303437.97563, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:59,003 {"event": "order_book_fetch_failed", "ts": 1795303439.0029852, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:59,008 {"event": "order_book_fetch_failed", "ts": 1795303439.0086124, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:59,015 {"event": "order_book_fetch_failed", "ts": 1795303439.015008, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:23:59,020 {"event": "order_book_fetch_failed", "ts": 1795303439.019892, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:00,048 {"event": "order_book_fetch_failed", "ts": 1795303440.0478537, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:00,054 {"event": "order_book_fetch_failed", "ts": 1795303440.0539994, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:00,063 {"event": "order_book_fetch_failed", "ts": 1795303440.0634742, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:00,070 {"event": "order_book_fetch_failed", "ts": 1795303440.0702088, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:01,089 {"event": "order_book_fetch_failed", "ts": 1795303441.0898306, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:01,092 {"event": "order_book_fetch_failed", "ts": 1795303441.0927215, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:01,095 {"event": "order_book_fetch_failed", "ts": 1795303441.0956557, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:01,099 {"event": "order_book_fetch_failed", "ts": 1795303441.0991957, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,297 {"event": "order_book_fetch_failed", "ts": 1795303448.2937977, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,304 {"event": "order_book_fetch_failed", "ts": 1795303448.3042984, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,310 {"event": "order_book_fetch_failed", "ts": 1795303448.3103323, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,314 {"event": "order_book_fetch_failed", "ts": 1795303448.3141088, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,331 {"event": "order_book_fetch_failed", "ts": 1795303448.331009, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:08,344 {"event": "order_book_fetch_failed", "ts": 1795303448.344693, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:09,346 {"event": "order_book_fetch_failed", "ts": 1795303449.346767, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:09,351 {"event": "order_book_fetch_failed", "ts": 1795303449.3516629, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:09,358 {"event": "order_book_fetch_failed", "ts": 1795303449.3584297, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:09,363 {"event": "order_book_fetch_failed", "ts": 1795303449.362943, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:10,393 {"event": "order_book_fetch_failed", "ts": 1795303450.3929138, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:10,397 {"event": "order_book_fetch_failed", "ts": 1795303450.3972695, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:10,405 {"event": "order_book_fetch_failed", "ts": 1795303450.4057283, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:10,411 {"event": "order_book_fetch_failed", "ts": 1795303450.4112878, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:11,432 {"event": "order_book_fetch_failed", "ts": 1795303451.432527, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:11,435 {"event": "order_book_fetch_failed", "ts": 1795303451.435341, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:11,438 {"event": "order_book_fetch_failed", "ts": 1795303451.4380069, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:11,440 {"event": "order_book_fetch_failed", "ts": 1795303451.4407783, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:12,454 {"event": "order_book_fetch_failed", "ts": 1795303452.4541738, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:12,457 {"event": "order_book_fetch_failed", "ts": 1795303452.4574077, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:12,461 {"event": "order_book_fetch_failed", "ts": 1795303452.4612317, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:12,464 {"event": "order_book_fetch_failed", "ts": 1795303452.4641922, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:13,489 {"event": "order_book_fetch_failed", "ts": 1795303453.4892092, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:13,494 {"event": "order_book_fetch_failed", "ts": 1795303453.4942067, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:13,501 {"event": "order_book_fetch_failed", "ts": 1795303453.5017047, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:13,507 {"event": "order_book_fetch_failed", "ts": 1795303453.5071936, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:14,538 {"event": "order_book_fetch_failed", "ts": 1795303454.538344, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:14,544 {"event": "order_book_fetch_failed", "ts": 1795303454.5443776, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:14,553 {"event": "order_book_fetch_failed", "ts": 1795303454.5538766, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:14,563 {"event": "order_book_fetch_failed", "ts": 1795303454.563792, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:15,594 {"event": "order_book_fetch_failed", "ts": 1795303455.594174, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:15,599 {"event": "order_book_fetch_failed", "ts": 1795303455.5994666, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:15,606 {"event": "order_book_fetch_failed", "ts": 1795303455.6059108, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:15,610 {"event": "order_book_fetch_failed", "ts": 1795303455.610098, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:16,645 {"event": "order_book_fetch_failed", "ts": 1795303456.6451538, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:16,650 {"event": "order_book_fetch_failed", "ts": 1795303456.6501322, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:16,656 {"event": "order_book_fetch_failed", "ts": 1795303456.6567268, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:16,660 {"event": "order_book_fetch_failed", "ts": 1795303456.660712, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:17,688 {"event": "order_book_fetch_failed", "ts": 1795303457.688287, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:17,692 {"event": "order_book_fetch_failed", "ts": 1795303457.6926746, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:17,699 {"event": "order_book_fetch_failed", "ts": 1795303457.6993449, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:17,704 {"event": "order_book_fetch_failed", "ts": 1795303457.704669, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:18,728 {"event": "order_book_fetch_failed", "ts": 1795303458.728397, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:18,731 {"event": "order_book_fetch_failed", "ts": 1795303458.731721, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:18,735 {"event": "order_book_fetch_failed", "ts": 1795303458.7353992, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:18,739 {"event": "order_book_fetch_failed", "ts": 1795303458.7394795, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:19,763 {"event": "order_book_fetch_failed", "ts": 1795303459.7628834, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:19,767 {"event": "order_book_fetch_failed", "ts": 1795303459.767622, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:19,772 {"event": "order_book_fetch_failed", "ts": 1795303459.7723565, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:19,776 {"event": "order_book_fetch_failed", "ts": 1795303459.776234, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:20,804 {"event": "order_book_fetch_failed", "ts": 1795303460.8046494, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:20,807 {"event": "order_book_fetch_failed", "ts": 1795303460.8075907, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:20,810 {"event": "order_book_fetch_failed", "ts": 1795303460.8105628, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:20,816 {"event": "order_book_fetch_failed", "ts": 1795303460.8167057, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:21,836 {"event": "order_book_fetch_failed", "ts": 1795303461.8362992, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:21,838 {"event": "order_book_fetch_failed", "ts": 1795303461.8385978, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:21,841 {"event": "order_book_fetch_failed", "ts": 1795303461.8409216, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:21,843 {"event": "order_book_fetch_failed", "ts": 1795303461.8438892, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:22,869 {"event": "order_book_fetch_failed", "ts": 1795303462.8693247, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:22,871 {"event": "order_book_fetch_failed", "ts": 1795303462.8715868, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:22,873 {"event": "order_book_fetch_failed", "ts": 1795303462.8738558, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:22,876 {"event": "order_book_fetch_failed", "ts": 1795303462.8765564, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:23,898 {"event": "order_book_fetch_failed", "ts": 1795303463.8989, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:23,901 {"event": "order_book_fetch_failed", "ts": 1795303463.9012747, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:23,903 {"event": "order_book_fetch_failed", "ts": 1795303463.9039059, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:23,906 {"event": "order_book_fetch_failed", "ts": 1795303463.9068081, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,122 {"event": "order_book_fetch_failed", "ts": 1795303471.1225767, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,127 {"event": "order_book_fetch_failed", "ts": 1795303471.1269958, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,130 {"event": "order_book_fetch_failed", "ts": 1795303471.130157, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,133 {"event": "order_book_fetch_failed", "ts": 1795303471.1331463, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,145 {"event": "order_book_fetch_failed", "ts": 1795303471.1456776, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:31,149 {"event": "order_book_fetch_failed", "ts": 1795303471.149198, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:32,157 {"event": "order_book_fetch_failed", "ts": 1795303472.1569986, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:32,162 {"event": "order_book_fetch_failed", "ts": 1795303472.1622791, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:32,168 {"event": "order_book_fetch_failed", "ts": 1795303472.1686358, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:32,173 {"event": "order_book_fetch_failed", "ts": 1795303472.1731136, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:33,200 {"event": "order_book_fetch_failed", "ts": 1795303473.20002, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:33,205 {"event": "order_book_fetch_failed", "ts": 1795303473.2051585, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:33,212 {"event": "order_book_fetch_failed", "ts": 1795303473.2128212, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:33,218 {"event": "order_book_fetch_failed", "ts": 1795303473.2180004, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:34,257 {"event": "order_book_fetch_failed", "ts": 1795303474.2571082, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:34,265 {"event": "order_book_fetch_failed", "ts": 1795303474.2654886, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:34,274 {"event": "order_book_fetch_failed", "ts": 1795303474.274001, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:34,288 {"event": "order_book_fetch_failed", "ts": 1795303474.2882226, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:35,345 {"event": "order_book_fetch_failed", "ts": 1795303475.3455186, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:35,349 {"event": "order_book_fetch_failed", "ts": 1795303475.3497496, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:35,353 {"event": "order_book_fetch_failed", "ts": 1795303475.3538203, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:35,360 {"event": "order_book_fetch_failed", "ts": 1795303475.3596346, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,482 {"event": "order_book_fetch_failed", "ts": 1795303488.4826922, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,499 {"event": "order_book_fetch_failed", "ts": 1795303488.4989493, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,519 {"event": "order_book_fetch_failed", "ts": 1795303488.5191894, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,541 {"event": "order_book_fetch_failed", "ts": 1795303488.5414872, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,562 {"event": "order_book_fetch_failed", "ts": 1795303488.5624714, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:48,566 {"event": "order_book_fetch_failed", "ts": 1795303488.5660174, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:49,570 {"event": "order_book_fetch_failed", "ts": 1795303489.5707362, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:49,573 {"event": "order_book_fetch_failed", "ts": 1795303489.5738113, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:49,577 {"event": "order_book_fetch_failed", "ts": 1795303489.5770571, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:49,579 {"event": "order_book_fetch_failed", "ts": 1795303489.5796947, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:50,604 {"event": "order_book_fetch_failed", "ts": 1795303490.6042137, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:50,609 {"event": "order_book_fetch_failed", "ts": 1795303490.609719, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:50,616 {"event": "order_book_fetch_failed", "ts": 1795303490.6163094, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:50,620 {"event": "order_book_fetch_failed", "ts": 1795303490.6207757, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:51,641 {"event": "order_book_fetch_failed", "ts": 1795303491.640797, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:51,645 {"event": "order_book_fetch_failed", "ts": 1795303491.6451988, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:51,655 {"event": "order_book_fetch_failed", "ts": 1795303491.6507745, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:51,662 {"event": "order_book_fetch_failed", "ts": 1795303491.662276, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:52,778 {"event": "order_book_fetch_failed", "ts": 1795303492.7780259, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:52,903 {"event": "order_book_fetch_failed", "ts": 1795303492.9035084, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:52,945 {"event": "order_book_fetch_failed", "ts": 1795303492.9452262, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:52,971 {"event": "order_book_fetch_failed", "ts": 1795303492.9713268, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:53,248 {"event": "order_book_fetch_failed", "ts": 1795303493.2483177, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:53,274 {"event": "order_book_fetch_failed", "ts": 1795303493.2740948, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:54,252 {"event": "order_book_fetch_failed", "ts": 1795303494.2522733, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:54,257 {"event": "order_book_fetch_failed", "ts": 1795303494.2574573, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:54,261 {"event": "order_book_fetch_failed", "ts": 1795303494.2618222, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:54,265 {"event": "order_book_fetch_failed", "ts": 1795303494.265293, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:55,290 {"event": "order_book_fetch_failed", "ts": 1795303495.2902555, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:55,296 {"event": "order_book_fetch_failed", "ts": 1795303495.2960026, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:55,303 {"event": "order_book_fetch_failed", "ts": 1795303495.3031437, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:55,309 {"event": "order_book_fetch_failed", "ts": 1795303495.3089793, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:56,334 {"event": "order_book_fetch_failed", "ts": 1795303496.3343291, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:56,337 {"event": "order_book_fetch_failed", "ts": 1795303496.3375223, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:56,340 {"event": "order_book_fetch_failed", "ts": 1795303496.3406818, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:56,346 {"event": "order_book_fetch_failed", "ts": 1795303496.346168, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:57,376 {"event": "order_book_fetch_failed", "ts": 1795303497.3759317, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:57,378 {"event": "order_book_fetch_failed", "ts": 1795303497.3779721, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:57,380 {"event": "order_book_fetch_failed", "ts": 1795303497.3799818, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:57,382 {"event": "order_book_fetch_failed", "ts": 1795303497.381935, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:58,402 {"event": "order_book_fetch_failed", "ts": 1795303498.4021113, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:58,404 {"event": "order_book_fetch_failed", "ts": 1795303498.404902, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:58,408 {"event": "order_book_fetch_failed", "ts": 1795303498.4085665, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:58,411 {"event": "order_book_fetch_failed", "ts": 1795303498.411156, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:59,426 {"event": "order_book_fetch_failed", "ts": 1795303499.426284, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:59,429 {"event": "order_book_fetch_failed", "ts": 1795303499.429035, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:59,432 {"event": "order_book_fetch_failed", "ts": 1795303499.4321728, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:24:59,435 {"event": "order_book_fetch_failed", "ts": 1795303499.4349334, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:00,466 {"event": "order_book_fetch_failed", "ts": 1795303500.4659975, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:00,470 {"event": "order_book_fetch_failed", "ts": 1795303500.4702058, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:00,475 {"event": "order_book_fetch_failed", "ts": 1795303500.4749262, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:00,486 {"event": "order_book_fetch_failed", "ts": 1795303500.4860644, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:01,517 {"event": "order_book_fetch_failed", "ts": 1795303501.5176253, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:01,520 {"event": "order_book_fetch_failed", "ts": 1795303501.519987, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:01,522 {"event": "order_book_fetch_failed", "ts": 1795303501.5226257, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:01,525 {"event": "order_book_fetch_failed", "ts": 1795303501.5252895, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:02,534 {"event": "order_book_fetch_failed", "ts": 1795303502.5344548, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:02,536 {"event": "order_book_fetch_failed", "ts": 1795303502.536138, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:02,538 {"event": "order_book_fetch_failed", "ts": 1795303502.5381553, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:02,540 {"event": "order_book_fetch_failed", "ts": 1795303502.5399687, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:03,565 {"event": "order_book_fetch_failed", "ts": 1795303503.565251, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:03,571 {"event": "order_book_fetch_failed", "ts": 1795303503.5716276, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:03,579 {"event": "order_book_fetch_failed", "ts": 1795303503.578904, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:03,586 {"event": "order_book_fetch_failed", "ts": 1795303503.5858529, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:04,608 {"event": "order_book_fetch_failed", "ts": 1795303504.6087737, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:04,611 {"event": "order_book_fetch_failed", "ts": 1795303504.6113667, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:04,614 {"event": "order_book_fetch_failed", "ts": 1795303504.614638, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:04,617 {"event": "order_book_fetch_failed", "ts": 1795303504.6178348, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:05,644 {"event": "order_book_fetch_failed", "ts": 1795303505.6449056, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:05,647 {"event": "order_book_fetch_failed", "ts": 1795303505.6477842, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:05,649 {"event": "order_book_fetch_failed", "ts": 1795303505.6498098, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:05,652 {"event": "order_book_fetch_failed", "ts": 1795303505.6525047, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:06,377 {"event": "order_book_fetch_failed", "ts": 1795303506.377391, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:06,383 {"event": "order_book_fetch_failed", "ts": 1795303506.3829873, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:06,389 {"event": "order_book_fetch_failed", "ts": 1795303506.3893228, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 00:25:06,395 {"event": "order_book_fetch_failed", "ts": 1795303506.3950958, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:56,566 {"event": "order_book_fetch_failed", "ts": 1795323776.5663667, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:56,569 {"event": "order_book_fetch_failed", "ts": 1795323776.56965, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:56,572 {"event": "order_book_fetch_failed", "ts": 1795323776.5728927, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:56,575 {"event": "order_book_fetch_failed", "ts": 1795323776.5755227, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:59,634 {"event": "order_book_fetch_failed", "ts": 1795323779.6348326, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:02:59,760 {"event": "order_book_fetch_failed", "ts": 1795323779.7604403, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:00,183 {"event": "order_book_fetch_failed", "ts": 1795323780.1834438, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:00,485 {"event": "order_book_fetch_failed", "ts": 1795323780.4849615, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:02,210 {"event": "order_book_fetch_failed", "ts": 1795323782.2099304, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:02,388 {"event": "order_book_fetch_failed", "ts": 1795323782.3883398, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:02,623 {"event": "order_book_fetch_failed", "ts": 1795323782.6233444, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:02,894 {"event": "order_book_fetch_failed", "ts": 1795323782.8947618, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:04,171 {"event": "order_book_fetch_failed", "ts": 1795323784.1710591, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:04,285 {"event": "order_book_fetch_failed", "ts": 1795323784.2855382, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:04,380 {"event": "order_book_fetch_failed", "ts": 1795323784.3799675, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:04,490 {"event": "order_book_fetch_failed", "ts": 1795323784.4903584, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:07,522 {"event": "order_book_fetch_failed", "ts": 1795323787.5227506, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:03:07,886 {"event": "order_book_fetch_failed", "ts": 1795323787.886663, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:03:08,112 {"event": "order_book_fetch_failed", "ts": 1795323788.1123044, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:03:08,541 {"event": "order_book_fetch_failed", "ts": 1795323788.5413103, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:03:38,003 {"event": "order_book_fetch_failed", "ts": 1795323818.003455, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:43,666 {"event": "order_book_fetch_failed", "ts": 1795323823.6660903, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:49,451 {"event": "order_book_fetch_failed", "ts": 1795323829.4513757, "side": "YES", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:03:54,728 {"event": "order_book_fetch_failed", "ts": 1795323834.728529, "side": "NO", "error": "PolyApiException[status_code=None, error_message=Request exception!]"}
+2026-11-22 06:04:08,840 {"event": "order_book_fetch_failed", "ts": 1795323848.840875, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:09,279 {"event": "order_book_fetch_failed", "ts": 1795323849.2793188, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:09,557 {"event": "order_book_fetch_failed", "ts": 1795323849.5573413, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:09,796 {"event": "order_book_fetch_failed", "ts": 1795323849.7966223, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:13,834 {"event": "order_book_fetch_failed", "ts": 1795323853.8345742, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:14,050 {"event": "order_book_fetch_failed", "ts": 1795323854.0507865, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:14,252 {"event": "order_book_fetch_failed", "ts": 1795323854.252225, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:14,495 {"event": "order_book_fetch_failed", "ts": 1795323854.4954035, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:18,362 {"event": "order_book_fetch_failed", "ts": 1795323858.361961, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:18,561 {"event": "order_book_fetch_failed", "ts": 1795323858.561149, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:18,761 {"event": "order_book_fetch_failed", "ts": 1795323858.7611828, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:18,955 {"event": "order_book_fetch_failed", "ts": 1795323858.9554644, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:21,711 {"event": "order_book_fetch_failed", "ts": 1795323861.7111893, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:21,890 {"event": "order_book_fetch_failed", "ts": 1795323861.890483, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:22,076 {"event": "order_book_fetch_failed", "ts": 1795323862.0761409, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:22,244 {"event": "order_book_fetch_failed", "ts": 1795323862.244757, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:24,961 {"event": "order_book_fetch_failed", "ts": 1795323864.9618096, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:25,141 {"event": "order_book_fetch_failed", "ts": 1795323865.141874, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:25,320 {"event": "order_book_fetch_failed", "ts": 1795323865.320576, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:25,510 {"event": "order_book_fetch_failed", "ts": 1795323865.510637, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:28,436 {"event": "order_book_fetch_failed", "ts": 1795323868.4361706, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:28,742 {"event": "order_book_fetch_failed", "ts": 1795323868.742344, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:28,929 {"event": "order_book_fetch_failed", "ts": 1795323868.9295976, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:29,235 {"event": "order_book_fetch_failed", "ts": 1795323869.23562, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:32,371 {"event": "order_book_fetch_failed", "ts": 1795323872.3709428, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:32,564 {"event": "order_book_fetch_failed", "ts": 1795323872.564057, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:32,740 {"event": "order_book_fetch_failed", "ts": 1795323872.7402618, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:32,922 {"event": "order_book_fetch_failed", "ts": 1795323872.9222171, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:35,456 {"event": "order_book_fetch_failed", "ts": 1795323875.4560833, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:35,711 {"event": "order_book_fetch_failed", "ts": 1795323875.711781, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:35,891 {"event": "order_book_fetch_failed", "ts": 1795323875.8918269, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:36,076 {"event": "order_book_fetch_failed", "ts": 1795323876.0766299, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:37,281 {"event": "settlement_deferred", "ts": 1795323877.2810478, "asset": "eth", "window": "5m", "reason": "outcome_unknown", "yes_price": 0.55, "no_price": 0.47}
+2026-11-22 06:04:37,285 {"event": "trade", "ts": 1795323877.285127, "mode": "[DRY]", "action": "redeem", "side": "YES", "price": 1.0, "size": 5.0, "order_id": null, "market": "Bitcoin Up or Down - November 21, 6:20PM-6:25PM ET", "window": "5m"}
+2026-11-22 06:04:48,436 {"event": "order_book_fetch_failed", "ts": 1795323888.4368515, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:48,638 {"event": "order_book_fetch_failed", "ts": 1795323888.6389163, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:48,815 {"event": "order_book_fetch_failed", "ts": 1795323888.8152037, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:04:49,016 {"event": "order_book_fetch_failed", "ts": 1795323889.016503, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:06,688 {"event": "trade", "ts": 1795323906.6882253, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.53, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:05AM-12:10AM ET", "window": "5m"}
+2026-11-22 06:05:09,918 {"event": "order_book_fetch_failed", "ts": 1795323909.9188828, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:10,114 {"event": "order_book_fetch_failed", "ts": 1795323910.114797, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:15,437 {"event": "order_book_fetch_failed", "ts": 1795323915.4375203, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:15,604 {"event": "order_book_fetch_failed", "ts": 1795323915.6048462, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:18,683 {"event": "order_book_fetch_failed", "ts": 1795323918.683798, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:18,986 {"event": "order_book_fetch_failed", "ts": 1795323918.986791, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:22,463 {"event": "order_book_fetch_failed", "ts": 1795323922.4631522, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:22,654 {"event": "order_book_fetch_failed", "ts": 1795323922.6545408, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:25,221 {"event": "trade", "ts": 1795323925.220873, "mode": "[DRY]", "action": "redeem", "side": "YES", "price": 1.0, "size": 5.0, "order_id": null, "market": "Bitcoin Up or Down - November 21, 6:20PM-6:25PM ET", "window": "5m"}
+2026-11-22 06:05:28,204 {"event": "order_book_fetch_failed", "ts": 1795323928.2044241, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:28,380 {"event": "order_book_fetch_failed", "ts": 1795323928.3802967, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:30,407 {"event": "trade", "ts": 1795323930.407551, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.73, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:05AM-12:10AM ET", "window": "5m"}
+2026-11-22 06:05:41,541 {"event": "quote_poll_error", "ts": 1795323941.541454, "error": "'trades'"}
+2026-11-22 06:05:42,142 {"event": "order_book_fetch_failed", "ts": 1795323942.1428738, "side": "YES", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:42,351 {"event": "order_book_fetch_failed", "ts": 1795323942.351288, "side": "NO", "error": "PolyApiException[status_code=404, error_message={'error': 'No orderbook exists for the requested token id'}]"}
+2026-11-22 06:05:59,157 {"event": "trade", "ts": 1795323959.1570356, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.77, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:05AM-12:10AM ET", "window": "5m"}
+2026-11-22 06:07:40,226 {"event": "trade", "ts": 1795324060.225979, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.52, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:05AM-12:10AM ET", "window": "5m"}
+2026-11-22 06:07:51,804 {"event": "quote_poll_error", "ts": 1795324071.804721, "error": "'trades'"}
+2026-11-22 06:10:15,015 {"event": "trade", "ts": 1795324215.0149999, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.52, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:10AM-12:15AM ET", "window": "5m"}
+2026-11-22 06:10:28,675 {"event": "trade", "ts": 1795324228.6758494, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.33, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:10AM-12:15AM ET", "window": "5m"}
+2026-11-22 06:10:41,062 {"event": "quote_poll_error", "ts": 1795324241.0627208, "error": "'trades'"}
+2026-11-22 06:11:06,114 {"event": "trade", "ts": 1795324266.114617, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.65, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:10AM-12:15AM ET", "window": "5m"}
+2026-11-22 06:12:31,302 {"event": "trade", "ts": 1795324351.3024266, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.35, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:10AM-12:15AM ET", "window": "5m"}
+2026-11-22 06:12:41,397 {"event": "quote_poll_error", "ts": 1795324361.3970582, "error": "'trades'"}
+2026-11-22 06:15:21,770 {"event": "trade", "ts": 1795324521.7701538, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.54, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:15AM-12:20AM ET", "window": "5m"}
+2026-11-22 06:15:25,645 {"event": "trade", "ts": 1795324525.6454747, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.56, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:15AM-12:20AM ET", "window": "5m"}
+2026-11-22 06:15:45,336 {"event": "trade", "ts": 1795324545.3361428, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.41, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:15AM-12:20AM ET", "window": "5m"}
+2026-11-22 06:16:17,241 {"event": "trade", "ts": 1795324577.2418566, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.82, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:15AM-12:20AM ET", "window": "5m"}
+2026-11-22 06:20:49,253 {"event": "trade", "ts": 1795324849.2537367, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.68, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:20AM-12:25AM ET", "window": "5m"}
+2026-11-22 06:21:00,260 {"event": "trade", "ts": 1795324860.2604725, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.76, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:20AM-12:25AM ET", "window": "5m"}
+2026-11-22 06:21:29,780 {"event": "trade", "ts": 1795324889.7805414, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.9399999999999998, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:20AM-12:25AM ET", "window": "5m"}
+2026-11-22 06:21:39,790 {"event": "quote_poll_error", "ts": 1795324899.7907305, "error": "'trades'"}
+2026-11-22 06:22:14,782 {"event": "trade", "ts": 1795324934.7821057, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.99, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:20AM-12:25AM ET", "window": "5m"}
+2026-11-22 06:22:23,865 {"event": "quote_poll_error", "ts": 1795324943.8656795, "error": "'trades'"}
+2026-11-22 06:25:45,091 {"event": "trade", "ts": 1795325145.0913641, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.72, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:25AM-12:30AM ET", "window": "5m"}
+2026-11-22 06:25:52,557 {"event": "trade", "ts": 1795325152.557788, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.8400000000000001, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:25AM-12:30AM ET", "window": "5m"}
+2026-11-22 06:27:25,723 {"event": "trade", "ts": 1795325245.7234757, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.62, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:25AM-12:30AM ET", "window": "5m"}
+2026-11-22 06:27:34,948 {"event": "quote_poll_error", "ts": 1795325254.947995, "error": "'trades'"}
+2026-11-22 06:28:28,977 {"event": "trade", "ts": 1795325308.9775574, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.55, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:25AM-12:30AM ET", "window": "5m"}
+2026-11-22 06:28:37,845 {"event": "quote_poll_error", "ts": 1795325317.8452578, "error": "'trades'"}
+2026-11-22 06:30:17,483 {"event": "trade", "ts": 1795325417.4831922, "mode": "[DRY]", "action": "BUY", "side": "YES", "price": 0.56, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:30AM-12:35AM ET", "window": "5m"}
+2026-11-22 06:30:31,495 {"event": "trade", "ts": 1795325431.495729, "mode": "[DRY]", "action": "SELL", "side": "YES", "price": 0.4, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:30AM-12:35AM ET", "window": "5m"}
+2026-11-22 06:30:40,555 {"event": "quote_poll_error", "ts": 1795325440.55532, "error": "'trades'"}
+2026-11-22 06:30:53,327 {"event": "trade", "ts": 1795325453.3276842, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.54, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:30AM-12:35AM ET", "window": "5m"}
+2026-11-22 06:30:58,511 {"event": "trade", "ts": 1795325458.5115955, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.42000000000000004, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:30AM-12:35AM ET", "window": "5m"}
+2026-11-22 06:35:19,358 {"event": "trade", "ts": 1795325719.3587139, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.76, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:35AM-12:40AM ET", "window": "5m"}
+2026-11-22 06:35:22,237 {"event": "trade", "ts": 1795325722.237064, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.71, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:35AM-12:40AM ET", "window": "5m"}
+2026-11-22 06:37:17,066 {"event": "trade", "ts": 1795325837.066593, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.93, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:35AM-12:40AM ET", "window": "5m"}
+2026-11-22 06:37:24,538 {"event": "quote_poll_error", "ts": 1795325844.5386434, "error": "'trades'"}
+2026-11-22 06:37:58,543 {"event": "trade", "ts": 1795325878.543418, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.99, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:35AM-12:40AM ET", "window": "5m"}
+2026-11-22 06:38:06,527 {"event": "quote_poll_error", "ts": 1795325886.5271957, "error": "'trades'"}
+2026-11-22 06:40:19,527 {"event": "trade", "ts": 1795326019.527462, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.6, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:40AM-12:45AM ET", "window": "5m"}
+2026-11-22 06:40:21,968 {"event": "trade", "ts": 1795326021.9681737, "mode": "[DRY]", "action": "BUY", "side": "NO", "price": 0.58, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:40AM-12:45AM ET", "window": "5m"}
+2026-11-22 06:40:38,823 {"event": "trade", "ts": 1795326038.8232937, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.48, "size": 5.0, "order_id": "dry-run", "market": "Ethereum Up or Down - November 22, 12:40AM-12:45AM ET", "window": "5m"}
+2026-11-22 06:40:45,976 {"event": "quote_poll_error", "ts": 1795326045.9768643, "error": "'trades'"}
+2026-11-22 06:41:25,252 {"event": "trade", "ts": 1795326085.252682, "mode": "[DRY]", "action": "SELL", "side": "NO", "price": 0.54, "size": 5.0, "order_id": "dry-run", "market": "Bitcoin Up or Down - November 22, 12:40AM-12:45AM ET", "window": "5m"}

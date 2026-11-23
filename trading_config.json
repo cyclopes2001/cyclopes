@@ -1,0 +1,56 @@
+{
+  "defaults": {
+    "entry_price": 0.97,
+    "stop_loss_pct": 0.50,
+    "take_profit_pct": 0.07,
+    "order_type": "FOK",
+    "order_size_min": 5,
+    "order_size_max": 5,
+    "max_order_size": 5,
+    "min_order_size": 5,
+    "max_shares": 5,
+    "min_orderbook_depth": 5,
+    "max_quote_age_seconds": 3.0,
+    "stop_loss_exit_max_retries": 5,
+    "stop_loss_exit_retry_ms": 400,
+    "fill_timeout_ms": 10000,
+    "fill_poll_ms": 400,
+    "listener_activate_secs": 90,
+    "dry_run": true,
+    "enabled": true,
+    "entry_window_seconds": 60,
+    "entry_seconds_left": 60,
+    "min_entry_seconds_left": 15,
+    "stabilization_window_seconds": 10.0,
+    "stabilization_tolerance_percent": 0.2,
+    "short_window_seconds": 5.0,
+    "max_short_window_move_percent": 0.15,
+    "endgame_enabled": true,
+    "hold_to_settle": true,
+    "endgame_max_seconds_left": 60,
+    "endgame_min_seconds_left": 15,
+    "endgame_min_move_bps": 10,
+    "min_price": 0.97,
+    "max_price": 0.99,
+    "momentum_signal_max_age": 0.75,
+    "momentum_execution_mode": "single_taker"
+  },
+  "workers": [
+    {
+      "asset": "btc",
+      "window": "5m"
+    },
+    {
+      "asset": "eth",
+      "window": "5m"
+    },
+    {
+      "asset": "sol",
+      "window": "5m"
+    },
+    {
+      "asset": "xrp",
+      "window": "5m"
+    }
+  ]
+}

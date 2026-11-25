@@ -4041,13 +4041,6 @@ class MarketWorker:
                 "strategy_label", "Paired Inventory ≤ 98¢",
             )
             payload["strategy_name"] = self.dashboard.get("strategy_name", payload["strategy_label"])
-            mp = self.dashboard.get("market_pnl")
-            if isinstance(mp, dict) and mp.get("available") and mp.get("total_usd") is not None:
-                payload["pnl_dollars"] = float(mp["total_usd"])
-                payload["unrealized_pnl"] = mp.get("unrealized_usd")
-                payload["realized_pnl"] = mp.get("realized_usd")
-            elif self.dashboard.get("total_market_pnl") is not None:
-                payload["pnl_dollars"] = float(self.dashboard["total_market_pnl"])
         return enrich_dashboard_payload(payload)
 
     async def on_market_expired(self) -> None:

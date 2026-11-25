@@ -460,7 +460,6 @@ def build_paired_dashboard(
     allow_new_accumulation: bool,
     initial_entry_threshold: float = 0.64,
     initial_entry_direction: str = "EXPENSIVE_SIDE",
-    market_unrealized_usd: Optional[float] = None,
 ) -> Dict[str, Any]:
     m = ledger.metrics()
     cap = capital_breakdown(ledger)
@@ -508,13 +507,6 @@ def build_paired_dashboard(
     if not history:
         history = rebuild_execution_history(ledger)
 
-    realized_usd = _money(m.realized_profit)
-    has_inventory = m.up_total_shares > _EPS or m.down_total_shares > _EPS
-    has_realized = abs(m.realized_profit) > _EPS
-    pnl_available = has_inventory or has_realized
-    unreal_usd = _money(market_unrealized_usd or 0.0) if market_unrealized_usd is not None else 0.0
-    total_pnl_usd = _money(realized_usd + unreal_usd) if pnl_available else None
-
     reserved = float(reserved_capital_usd)
     if reserved <= _EPS and pending_order:
         req = float(pending_order.get("requested_qty") or 0.0)
@@ -558,13 +550,6 @@ def build_paired_dashboard(
             "max_slots": max_slots,
         },
         "economics": econ,
-        "pnl": {
-            "realized_usd": realized_usd,
-            "unrealized_usd": unreal_usd if pnl_available else None,
-            "total_usd": total_pnl_usd,
-            "valuation_method": "mark_to_bid",
-            "available": pnl_available,
-        },
         "hedge_monitor": hedge,
         "capital": {
             **cap,

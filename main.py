@@ -755,30 +755,8 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       font-variant-numeric: tabular-nums;
     }
     .font-mono { font-family: 'JetBrains Mono','Consolas','Menlo',monospace !important; font-variant-numeric: tabular-nums; }
-    .card { transition: border-color 0.2s ease; }
-    .card.min-bot-card:hover { transform: none; }
-    .dashboard-noise { display: none !important; }
-    .min-pnl-hero {
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 14px;
-      padding: 16px 18px;
-      background: rgba(9,9,11,.6);
-    }
-    .min-pnl-hero .min-pnl-big { font-size: 32px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-    .min-pnl-hero .min-pnl-sub { font-size: 12px; color: #a1a1aa; margin-top: 4px; font-variant-numeric: tabular-nums; }
-    .min-grid { display: grid; gap: 10px; }
-    @media (min-width: 640px) { .min-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .min-block { border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 12px 14px; background: rgba(0,0,0,.15); }
-    .min-kicker { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #71717a; margin-bottom: 8px; }
-    .min-line { font-size: 13px; color: #e4e4e7; line-height: 1.5; }
-    .min-line.dim { color: #a1a1aa; font-size: 12px; }
-    .min-pnl-pos { color: var(--accent-muted); }
-    .min-pnl-neg { color: #f87171; }
-    .min-pnl-neu { color: #e4e4e7; }
-    .min-val-lg { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    details.min-details > summary { cursor: pointer; font-size: 11px; color: #71717a; margin-top: 8px; }
-    .min-feed { max-height: 120px; overflow-y: auto; font-size: 11px; color: #a1a1aa; }
-    .min-feed-row { padding: 4px 0; border-bottom: 1px solid rgba(63,63,70,.35); }
+    .card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .card:hover { transform: translateY(-3px); }
     .bot-card-body { position: relative; }
     .pair-terminal { font-family: 'JetBrains Mono','Consolas',monospace; font-variant-numeric: tabular-nums; }
     .pair-panel { background: rgba(24,24,27,.85); border: 1px solid rgba(63,63,70,.55); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
@@ -1210,7 +1188,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
   <!-- ── Header ──────────────────────────────────────────────── -->
   <div class="flex items-center justify-between mb-5">
     <div>
-      <h1 class="text-2xl font-semibold"
+      <h1 class="text-4xl font-bold"
           style="font-family:'JetBrains Mono','Consolas',monospace;letter-spacing:-.03em;line-height:1;">
         __BOT_NAME__
       </h1>
@@ -1242,9 +1220,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     <span id="schedule-text">Checking trading schedule…</span>
   </div>
 
-  <div id="portfolio-pnl-strip" class="min-pnl-hero mb-4" aria-label="Portfolio PnL"></div>
-
-  <div id="sys-health" class="sys-health dashboard-noise" aria-label="System health">
+  <div id="sys-health" class="sys-health" aria-label="System health">
     <span class="sys-health-item"><span id="health-dot-api" class="sys-dot warn"></span>API <span id="health-lbl-api">…</span></span>
     <span class="sys-health-item"><span id="health-dot-engine" class="sys-dot warn"></span>Engine <span id="health-lbl-engine">…</span></span>
     <span class="sys-health-item"><span id="health-dot-ws" class="sys-dot warn"></span>WS <span id="health-lbl-ws">…</span></span>
@@ -1253,7 +1229,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
   </div>
 
   <!-- ── Profile stats strip (Polymarket-style) ─────────────────── -->
-  <div id="profile-stats-strip" class="grid grid-cols-3 w-full mb-5 dashboard-noise">
+  <div id="profile-stats-strip" class="grid grid-cols-3 w-full mb-5">
     <div class="flex flex-col gap-1">
       <span class="text-[10px] font-semibold uppercase tracking-widest text-zinc-500"
             style="font-family:'Inter',system-ui,sans-serif;">Positions Value</span>
@@ -1271,7 +1247,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <p id="math-quote" class="mb-5 text-sm font-bold dashboard-noise"
+  <p id="math-quote" class="mb-5 text-sm font-bold"
      style="color:var(--accent-muted);font-family:'JetBrains Mono','Consolas',monospace;letter-spacing:-.03em;line-height:1;transition:opacity .6s ease;"></p>
   <script>
   (function(){
@@ -1300,10 +1276,8 @@ HTML_CONTENT = r"""<!DOCTYPE html>
   })();
   </script>
 
-  <!-- ── P&L Chart Card (collapsed) ─────────────────────────── -->
-  <details class="pm-card dashboard-noise mb-4">
-    <summary class="text-xs text-zinc-500 cursor-pointer px-1 py-1">Portfolio history</summary>
-  <div class="pm-card border-0 shadow-none" style="background:transparent;padding-top:8px;">
+  <!-- ── P&L Chart Card ──────────────────────────────────────── -->
+  <div class="pm-card">
     <div class="pm-card-hdr">
       <div class="pm-label-grp">
         <span class="pm-tri neg" id="pm-tri">▼</span>
@@ -1350,7 +1324,6 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
     </div>
   </div>
-  </details>
 
   <!-- ── Trades / Positions / History / Calendar ───────────────── -->
   <div class="pm-card" id="portfolio-tabs-card">
@@ -2006,7 +1979,6 @@ function applyDashboardPayload(d) {
     renderGlobalStats(d.global_stats || {});
     renderProfileStats(window._lastBots, window._lastGlobalStats);
     pushLivePnlPoint((d.global_stats && d.global_stats.total_pnl) ?? 0);
-    renderPortfolioPnlStrip(window._lastBots);
     renderBots(window._lastBots);
     renderPositions(d.positions || []);
     renderTradeHistory(window._lastTradeHistory);
@@ -2437,7 +2409,7 @@ function renderBots(bots){
       c.appendChild(card);
     }
     const pnlBorder = _botCardPnlBorderClass(bot);
-    card.className = ['card', 'min-bot-card', 'bg-zinc-900', 'rounded-xl', 'p-4', 'md:p-5', 'border', 'border-zinc-800', pnlBorder].filter(Boolean).join(' ');
+    card.className = ['card', 'bg-zinc-900', 'rounded-3xl', 'p-5', 'md:p-6', pnlBorder].filter(Boolean).join(' ');
     card.innerHTML=renderCard(bot);
   });
   // Remove stale cards when asset count decreases (e.g. config change).
@@ -2524,135 +2496,62 @@ function _renderDcaLegs(legs,sideLabel){
     <div class="text-zinc-500">${leg.order_id?('#'+String(leg.order_id).slice(0,8)):''} ${_fmtTs(leg.timestamp)}</div>
   </div>`).join('');
 }
-function _pnlToneClass(v) {
-  if (!_isFiniteNum(v)) return 'min-pnl-neu';
-  if (v > 0) return 'min-pnl-pos';
-  if (v < 0) return 'min-pnl-neg';
-  return 'min-pnl-neu';
-}
-function _fmtPnlSigned(v) {
-  if (!_isFiniteNum(v)) return '—';
-  if (!_balanceVisible) return _maskUsd();
-  const n = Number(v);
-  const sign = n > 0 ? '+' : n < 0 ? '-' : '';
-  return sign + '$' + _fmtMoney(Math.abs(n));
-}
-function _botMarketPnl(bot) {
-  const p = (bot.paired && bot.paired.pnl) || bot.market_pnl;
-  if (p && p.available) {
-    return {
-      ok: true,
-      total: p.total_usd != null ? Number(p.total_usd) : null,
-      realized: Number(p.realized_usd) || 0,
-      unrealized: p.unrealized_usd != null ? Number(p.unrealized_usd) : null,
-    };
-  }
-  const r = Number(bot.realized_pnl);
-  const u = Number(bot.unrealized_pnl);
-  const has = (bot.yes_shares > 0 || bot.no_shares > 0 || bot.up_inventory > 0 || bot.down_inventory > 0
-    || Math.abs(r) > 1e-6);
-  if (!has) return { ok: false };
-  const total = (_isFiniteNum(r) ? r : 0) + (_isFiniteNum(u) ? u : 0);
-  return { ok: true, total, realized: r || 0, unrealized: _isFiniteNum(u) ? u : null };
-}
-function renderPortfolioPnlStrip(bots) {
-  const el = document.getElementById('portfolio-pnl-strip');
-  if (!el) return;
-  let realized = 0, unreal = 0, any = false, allUnrealOk = true;
-  for (const b of (bots || [])) {
-    const mp = _botMarketPnl(b);
-    if (!mp.ok) continue;
-    any = true;
-    realized += mp.realized || 0;
-    if (mp.unrealized != null) unreal += mp.unrealized;
-    else allUnrealOk = false;
-  }
-  if (!any) {
-    el.innerHTML = '<div class="min-kicker">Total PnL</div><div class="min-pnl-big min-pnl-neu">—</div><div class="min-pnl-sub">No open market position</div>';
-    return;
-  }
-  const total = realized + (allUnrealOk ? unreal : (unreal || 0));
-  const tc = _pnlToneClass(total);
-  el.innerHTML = `<div class="min-kicker" title="Current markets: realized fills + unrealized mark-to-bid">Total PnL (active markets)</div>
-    <div class="min-pnl-big ${tc}">${_fmtPnlSigned(total)}</div>
-    <div class="min-pnl-sub">Realized: ${_fmtPnlSigned(realized)} · Unrealized: ${allUnrealOk ? _fmtPnlSigned(unreal) : '—'}</div>`;
-}
 function _renderPairedTerminalCard(bot){
   const p=bot.paired||{};
   const pos=p.positions||{};
-  const pair=p.pairing||{};
-  const dca=p.dca||{};
   const econ=p.economics||{};
-  const mp=_botMarketPnl(bot);
-  const label=`${bot.asset||'BOT'} ${(bot.window||'5m').toUpperCase()} Market`;
+  const ui=p.strategy_ui||{};
+  const label=`${bot.asset||'BOT'} ${bot.window||'5m'}`.trim();
+  const marketId=(bot.market_id||'').slice(0,14);
   const yesAskC=Number(bot.yes_ask_c||bot.yes||0);
   const noAskC=Number(bot.no_ask_c||bot.no||0);
-  const upSh=Number(pos.up?.shares||0);
-  const dnSh=Number(pos.down?.shares||0);
-  const upAvg=Number(pos.up?.avg_entry_c||0);
-  const dnAvg=Number(pos.down?.avg_entry_c||0);
-  const upCost=Number(pos.up?.total_cost_usd||0);
-  const dnCost=Number(pos.down?.total_cost_usd||0);
-  const maxSlots=Number(dca.max_slots||3);
-  const upLegs=Number(dca.up_completed_legs||0);
-  const dnLegs=Number(dca.down_completed_legs||0);
-  const running=String(bot.status||'').toUpperCase()!=='ERROR' && !!bot.market_end_iso;
-  const activeMarkets=(window._lastBots||[]).filter(b=>b.market_end_iso).length;
-  const entryThr=Number(bot.initial_entry_threshold_c||64);
-  const strategyShort=bot.initial_entry_direction==='EXPENSIVE_SIDE'?'Expensive side first':'Cheap side first';
-  const combC=Number(econ.combined_pair_cost_c||0);
-  const combLabel=(pair.matched_shares>0 && combC>0)?`${combC.toFixed(0)}¢`:'—';
-  const history=(p.execution_history||[]).slice().reverse().slice(0,8).map(ev=>
-    `<div class="min-feed-row">${ev.explanation||ev.event_type||''}</div>`
+  const expiryUrgent=(Number(bot.seconds_left)||999)<=90;
+  const unmatchedNote=econ.note_unhedged_not_guaranteed?'<div class="text-[10px] text-amber-400/90 mt-1">Unmatched inventory is not guaranteed profit.</div>':'';
+  const history=(p.execution_history||[]).slice().reverse().map(ev=>{
+    const cat=ev.category||'all';
+    return `<div class="pair-feed-row" data-cat="${cat}"><span class="text-zinc-500">${_fmtTs(ev.timestamp)}</span> ${ev.explanation||ev.event_type||''}</div>`;
+  }).join('');
+  const decisions=(p.decision_feed||[]).slice(0,12).map(d=>
+    `<div class="pair-feed-row"><span class="text-zinc-500">${_fmtTs(d.timestamp)}</span> ${d.message||''}</div>`
   ).join('');
-  const decisions=(p.decision_feed||[]).slice(0,6).map(d=>
-    `<div class="min-feed-row">${d.message||''}</div>`
-  ).join('');
-  const totalPnl=mp.ok&&mp.total!=null?mp.total:null;
-  const pnlBlock=mp.ok?`<div class="min-block">
-      <div class="min-kicker">Total PnL</div>
-      <div class="min-val-lg ${_pnlToneClass(totalPnl)}">${totalPnl!=null?_fmtPnlSigned(totalPnl):'—'}</div>
-      <div class="min-line dim">Realized: ${_fmtPnlSigned(mp.realized)}</div>
-      <div class="min-line dim">Unrealized: ${mp.unrealized!=null?_fmtPnlSigned(mp.unrealized):'—'}</div>
-    </div>`:`<div class="min-block"><div class="min-kicker">Total PnL</div><div class="min-val-lg min-pnl-neu">—</div></div>`;
-  return `<div class="bot-card-body min-dashboard">
+  return `<div class="rounded-2xl bot-card-body pair-terminal">
     ${_renderOutcomeStamp(bot)}
-    <div class="min-grid cols-2">
-      ${pnlBlock}
-      <div class="min-block">
-        <div class="min-kicker">Active market</div>
-        <div class="min-line" style="font-weight:600;">${label}</div>
-        <div class="min-line">UP: ${yesAskC>0?yesAskC.toFixed(0)+'¢':'—'}</div>
-        <div class="min-line">DOWN: ${noAskC>0?noAskC.toFixed(0)+'¢':'—'}</div>
-        <div class="min-line dim">Time remaining: <span data-market-countdown="${bot.market_end_iso||''}">${bot.timer||'--:--'}</span></div>
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div>
+        <div class="text-xl font-black tracking-tight text-zinc-50">${label} <span class="text-zinc-500 text-sm font-mono">UP/DOWN</span></div>
+        <div class="text-[10px] font-mono text-zinc-500 mt-1">ID ${marketId||'—'}… · ${bot.strategy_label||'Paired'}</div>
+        <div class="mt-2"><span class="pair-state">${ui.state||bot.strategy_ui_state||'SCANNING'}</span></div>
       </div>
-      <div class="min-block">
-        <div class="min-kicker">Positions</div>
-        <div class="min-line"><span style="color:#86efac;">UP</span> ${upSh} sh · Avg ${upAvg.toFixed(0)}¢ · Cost $${_fmtMoney(upCost)}</div>
-        <div class="min-line"><span style="color:#fca5a5;">DOWN</span> ${dnSh} sh · Avg ${dnAvg.toFixed(0)}¢ · Cost $${_fmtMoney(dnCost)}</div>
-      </div>
-      <div class="min-block">
-        <div class="min-kicker">Paired inventory</div>
-        <div class="min-line">Matched: ${Number(pair.matched_shares||0)} shares</div>
-        <div class="min-line">Unmatched UP: ${Number(pair.unmatched_up||0)}</div>
-        <div class="min-line">Unmatched DOWN: ${Number(pair.unmatched_down||0)}</div>
-        <div class="min-line dim">Combined cost: ${combLabel}</div>
-      </div>
-      <div class="min-block">
-        <div class="min-kicker">Bot status</div>
-        <div class="min-line">${running?'Running':'Idle'}${bot.dry_run?' · Paper':''}</div>
-        <div class="min-line dim">${strategyShort} · Entry ≥ ${entryThr.toFixed(0)}¢</div>
-        <div class="min-line dim">Active markets: ${activeMarkets}</div>
-      </div>
-      <div class="min-block">
-        <div class="min-kicker">DCA</div>
-        <div class="min-line">UP: ${upLegs}/${maxSlots} legs</div>
-        <div class="min-line">DOWN: ${dnLegs}/${maxSlots} legs</div>
+      <div class="text-right">
+        <div class="pair-expiry ${expiryUrgent?'text-amber-400':''}" data-market-countdown="${bot.market_end_iso||''}">${bot.timer||'--:--'}</div>
+        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">expires · ${ui.phase||bot.market_phase||'—'}</div>
+        <div class="text-[10px] text-zinc-500 mt-1">${ui.allow_new_accumulation?'Accumulation ON':'Accumulation paused'}</div>
       </div>
     </div>
-    <details class="min-details"><summary>Recent activity</summary>
-      <div class="min-feed">${history||decisions||'<div class="min-feed-row">No activity yet.</div>'}</div>
-    </details>
+    <div class="flex gap-2 mb-3">
+      <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">UP ask</div><div class="text-lg font-bold pair-up">${yesAskC?yesAskC.toFixed(1)+'¢':'—'}</div></div>
+      <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">DOWN ask</div><div class="text-lg font-bold pair-down">${noAskC?noAskC.toFixed(1)+'¢':'—'}</div></div>
+    </div>
+    <div class="pair-panel mb-3 border-emerald-900/40">
+      <div class="pair-panel-title">Positions (total acquisition cost)</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><div class="pair-pos-line pair-up">${pos.up?.line||'0 UP @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.up?.avg_entry_c||0).toFixed(1)}¢</div></div>
+        <div><div class="pair-pos-line pair-down">${pos.down?.line||'0 DOWN @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.down?.avg_entry_c||0).toFixed(1)}¢</div></div>
+      </div>
+    </div>
+    <div class="pair-panel mb-3">
+      <div class="pair-panel-title">Combined economics (matched pairs only)</div>
+      <div class="text-xs ${_econClass(econ.economics_status)}">UP avg ${Number(econ.up_avg_c||0).toFixed(1)}¢ + DOWN avg ${Number(econ.down_avg_c||0).toFixed(1)}¢ = <span class="font-bold">${Number(econ.combined_pair_cost_c||0).toFixed(1)}¢</span> / target ${Number(econ.target_combined_c||98).toFixed(0)}¢</div>
+      <div class="text-[11px] text-zinc-400 mt-1">Completed pairs: ${Number(econ.completed_pairs||0)} · Gross/pair ${econ.gross_profit_per_pair_c!=null?Number(econ.gross_profit_per_pair_c).toFixed(1)+'¢':'—'} · Net/pair ${econ.net_profit_per_pair_c!=null?Number(econ.net_profit_per_pair_c).toFixed(1)+'¢':'—'}</div>
+      <div class="text-[11px] text-zinc-500 mt-1">Realized P&L $${_fmtMoney(econ.realized_pnl_usd||0)} · Unrealized (marks) $${_fmtMoney(bot.unrealized_pnl||0)}</div>
+      ${unmatchedNote}
+    </div>
+    <details class="pair-details"><summary>Execution history</summary><div class="pair-feed" data-feed="history">${history||'<div class="text-zinc-600">No fills yet.</div>'}</div></details>
+    <details class="pair-details"><summary>Decision log</summary><div class="pair-feed">${decisions||'<div class="text-zinc-600">—</div>'}</div></details>
+    <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">
+      <span>${bot.dry_run?'PAPER':'LIVE'} · FOK ${Number(bot.order_size||5)} sh</span>
+      <span>Cum. $${_fmtMoney(bot.cumulative_pnl||0)}</span>
+    </div>
   </div>`;
 }
 

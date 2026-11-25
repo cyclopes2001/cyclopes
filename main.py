@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import os
 import time as _time
 import traceback
@@ -255,6 +256,63 @@ _SNAPSHOT_EVERY_SEC: int        = 60   # record a portfolio snapshot this often
 _FLUSH_EVERY_SEC:    int        = 60   # flush buffer → Redis this often
 
 _biggest_win_cache: dict[str, float | int] = {'value': 0.0, 'last_total_trades': -1}
+_last_broadcast_ok: float = 0.0
+
+
+def _sanitize_for_json(value: Any) -> Any:
+    """Make dashboard payloads safe for JSON (NaN/Inf break browser JSON.parse)."""
+    if isinstance(value, dict):
+        return {str(k): _sanitize_for_json(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_for_json(v) for v in value]
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    if isinstance(value, (int, str, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def dashboard_json_dumps(data: Any) -> str:
+    return json.dumps(_sanitize_for_json(data), allow_nan=False)
+
+
+def dashboard_health_snapshot() -> dict[str, Any]:
+    engine_active = any(
+        getattr(b, "active_market", None) is not None for b in bots
+    ) if bots else False
+    return {
+        "api": True,
+        "trading_engine": bool(bots),
+        "trading_engine_active": engine_active,
+        "bot_count": len(bots),
+        "ws_clients": len(active_connections),
+        "last_broadcast_unix": _last_broadcast_ok or None,
+        "server_unix": _time.time(),
+    }
+
+
+def build_dashboard_broadcast_payload() -> dict[str, Any]:
+    bot_data: list[dict] = []
+    for bot in bots:
+        try:
+            bot_data.append(bot.get_dashboard_data())
+        except Exception as e:
+            bot_data.append({
+                "asset": getattr(bot, "asset_type", "ERROR").upper(),
+                "status": "ERROR",
+                "position": str(e)[:80],
+            })
+    return {
+        "bots": bot_data,
+        "global_stats": get_global_stats(),
+        "positions": collect_open_positions(bots),
+        "trade_history": get_trade_history(10),
+        "config": _app_config_payload(),
+        "health": dashboard_health_snapshot(),
+        "timestamp": asyncio.get_running_loop().time(),
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -439,39 +497,22 @@ async def portfolio_snapshot_loop():
 
 
 async def broadcast_loop():
+    global _last_broadcast_ok
     while not shutdown_requested():
         try:
-            bot_data = []
-            for bot in bots:
-                try:
-                    bot_data.append(bot.get_dashboard_data())
-                except Exception as e:
-                    bot_data.append({
-                        "asset":    getattr(bot, "asset_type", "ERROR").upper(),
-                        "status":   "ERROR",
-                        "position": str(e)[:80],
-                    })
-
-            gs = get_global_stats()
-            data = {
-                "bots":          bot_data,
-                "global_stats":  gs,
-                "positions":     collect_open_positions(bots),
-                "trade_history": get_trade_history(10),
-                "config":        _app_config_payload(),
-                "timestamp":     asyncio.get_running_loop().time(),
-            }
-            message = json.dumps(data)
+            data = build_dashboard_broadcast_payload()
+            message = dashboard_json_dumps(data)
             for ws in active_connections[:]:
                 try:
                     await ws.send_text(message)
                 except Exception:
                     if ws in active_connections:
                         active_connections.remove(ws)
-
+            _last_broadcast_ok = _time.time()
             await asyncio.sleep(1.0)
         except Exception as e:
             print(f"Broadcast error: {e}")
+            traceback.print_exc()
             await asyncio.sleep(3)
 
 
@@ -858,6 +899,19 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     }
     .conn-status.live { color:var(--accent-muted); }
     .conn-status.off { color:#f87171; }
+    .sys-health {
+      display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center;
+      font-family:'JetBrains Mono','Consolas',monospace;
+      font-size:10px; font-weight:600; letter-spacing:.02em;
+      color:#71717a; margin-bottom:12px; padding:8px 12px;
+      border-radius:10px; border:1px solid rgba(255,255,255,0.06);
+      background:rgba(0,0,0,0.2);
+    }
+    .sys-health-item { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+    .sys-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:#52525b; }
+    .sys-dot.ok { background:var(--accent-muted); }
+    .sys-dot.warn { background:#facc15; }
+    .sys-dot.err { background:#f87171; }
     .pm-change-lbl { font-family:'JetBrains Mono','Consolas',monospace; font-variant-numeric:tabular-nums; font-size:12px; font-weight:600; color:#71717a; letter-spacing:.01em; }
     .pm-change-lbl.pos { color:var(--accent-muted); } .pm-change-lbl.neg { color:#ef4444; }
     .pm-chart-box { height:160px; position:relative; overflow:hidden; margin-top:12px; }
@@ -1157,6 +1211,14 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     <span id="schedule-dot" class="w-2 h-2 rounded-full inline-block flex-shrink-0"
           style="background:var(--accent-muted)"></span>
     <span id="schedule-text">Checking trading schedule…</span>
+  </div>
+
+  <div id="sys-health" class="sys-health" aria-label="System health">
+    <span class="sys-health-item"><span id="health-dot-api" class="sys-dot warn"></span>API <span id="health-lbl-api">…</span></span>
+    <span class="sys-health-item"><span id="health-dot-engine" class="sys-dot warn"></span>Engine <span id="health-lbl-engine">…</span></span>
+    <span class="sys-health-item"><span id="health-dot-ws" class="sys-dot warn"></span>WS <span id="health-lbl-ws">…</span></span>
+    <span class="sys-health-item"><span id="health-dot-chart" class="sys-dot warn"></span>Chart <span id="health-lbl-chart">…</span></span>
+    <span class="sys-health-item text-zinc-600" id="health-last-update">Last update —</span>
   </div>
 
   <!-- ── Profile stats strip (Polymarket-style) ─────────────────── -->
@@ -1537,17 +1599,20 @@ async function loadHistory(period) {
   if (_loadingHist) return;
   _loadingHist = true;
   try {
-    const res = await fetch('/api/history?period=' + period);
+    const res = await _fetchWithTimeout('/api/history?period=' + encodeURIComponent(period), 15000);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data   = await res.json();
     _historyPts  = (data.points || []).filter(p => !p.synthetic);
     _historyLoaded = true;
     _livePts = [];
+    window._dashHealth.chart = 'ok';
   } catch(e) {
     console.warn('loadHistory error:', e);
     _historyLoaded = true;
+    window._dashHealth.chart = 'err';
   } finally {
     _loadingHist = false;
+    updateHealthPanel();
   }
   updatePnlChart();
 }
@@ -1854,29 +1919,128 @@ function _setConnStatus(state) {
   }
 }
 
-let ws;
-function connect() {
-  _setConnStatus('connecting');
-  const proto = location.protocol==='https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen  = () => _setConnStatus('live');
-  ws.onclose = () => {
-    _setConnStatus('reconnecting');
-    setTimeout(connect, 2500);
-  };
-  ws.onerror = () => ws.close();
-  ws.onmessage = e => {
-    const d = JSON.parse(e.data);
+window._dashHealth = { api:'init', engine:'init', ws:'connecting', chart:'init', lastUpdate:null, lastError:null };
+
+function _fetchWithTimeout(url, ms) {
+  const timeoutMs = ms || 10000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
+function _setHealthDot(id, state) {
+  const dot = document.getElementById(id);
+  if (!dot) return;
+  dot.className = 'sys-dot ' + (state === 'ok' ? 'ok' : state === 'warn' ? 'warn' : state === 'err' ? 'err' : '');
+}
+
+function updateHealthPanel() {
+  const h = window._dashHealth || {};
+  _setHealthDot('health-dot-api', h.api === 'ok' ? 'ok' : h.api === 'err' ? 'err' : 'warn');
+  _setHealthDot('health-dot-engine', h.engine === 'ok' ? 'ok' : h.engine === 'err' ? 'err' : 'warn');
+  _setHealthDot('health-dot-ws', h.ws === 'live' ? 'ok' : h.ws === 'reconnecting' ? 'warn' : h.ws === 'err' ? 'err' : 'warn');
+  _setHealthDot('health-dot-chart', h.chart === 'ok' ? 'ok' : h.chart === 'err' ? 'err' : 'warn');
+  const la = document.getElementById('health-lbl-api');
+  if (la) la.textContent = h.api === 'ok' ? 'OK' : h.api === 'err' ? 'FAIL' : '…';
+  const le = document.getElementById('health-lbl-engine');
+  if (le) le.textContent = h.engine === 'ok' ? 'ON' : h.engine === 'degraded' ? 'IDLE' : h.engine === 'err' ? 'OFF' : '…';
+  const lw = document.getElementById('health-lbl-ws');
+  if (lw) lw.textContent = h.ws === 'live' ? 'LIVE' : h.ws === 'reconnecting' ? 'RECONN' : h.ws === 'err' ? 'FAIL' : '…';
+  const lc = document.getElementById('health-lbl-chart');
+  if (lc) lc.textContent = h.chart === 'ok' ? 'OK' : h.chart === 'err' ? 'FAIL' : '…';
+  const lu = document.getElementById('health-last-update');
+  if (lu && h.lastUpdate) {
+    lu.textContent = 'Last update ' + new Date(h.lastUpdate).toLocaleTimeString();
+  }
+}
+
+function _engineHealthFromPayload(d) {
+  const health = d && d.health;
+  if (health && health.trading_engine) {
+    return health.trading_engine_active ? 'ok' : 'ok';
+  }
+  if (d && d.bots && d.bots.length) return 'ok';
+  return 'degraded';
+}
+
+function applyDashboardPayload(d) {
+  if (!d) return;
+  try {
     window._lastBots = d.bots || [];
     window._lastTradeHistory = d.trade_history || [];
     window._lastGlobalStats = d.global_stats || {};
-    renderGlobalStats(d.global_stats);
+    renderGlobalStats(d.global_stats || {});
     renderProfileStats(window._lastBots, window._lastGlobalStats);
-    pushLivePnlPoint(d.global_stats.total_pnl ?? 0);
+    pushLivePnlPoint((d.global_stats && d.global_stats.total_pnl) ?? 0);
     renderBots(window._lastBots);
     renderPositions(d.positions || []);
     renderTradeHistory(window._lastTradeHistory);
     if (d.config) renderAppConfig(d.config);
+    window._dashHealth.lastUpdate = Date.now();
+    window._dashHealth.engine = _engineHealthFromPayload(d);
+    updateHealthPanel();
+  } catch (err) {
+    console.error('applyDashboardPayload failed:', err);
+    window._dashHealth.lastError = String(err.message || err);
+  }
+}
+
+async function bootstrapDashboard() {
+  window._dashHealth.api = 'loading';
+  updateHealthPanel();
+  try {
+    const res = await _fetchWithTimeout('/api/status', 12000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    window._dashHealth.api = 'ok';
+    applyDashboardPayload(d);
+  } catch (e) {
+    console.warn('bootstrapDashboard:', e);
+    window._dashHealth.api = 'err';
+    window._dashHealth.lastError = String(e.message || e);
+    const c = document.getElementById('bots-container');
+    if (c && !c.children.length) {
+      c.innerHTML = '<div class="pm-empty text-amber-400/90">API unreachable — retrying… <button type="button" class="underline ml-1" onclick="bootstrapDashboard()">Retry</button></div>';
+    }
+    updateHealthPanel();
+    setTimeout(bootstrapDashboard, 8000);
+  }
+}
+
+let ws;
+let _wsBackoffMs = 2500;
+function connect() {
+  _setConnStatus('connecting');
+  window._dashHealth.ws = 'connecting';
+  updateHealthPanel();
+  const proto = location.protocol==='https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen  = () => {
+    _setConnStatus('live');
+    window._dashHealth.ws = 'live';
+    _wsBackoffMs = 2500;
+    updateHealthPanel();
+  };
+  ws.onclose = () => {
+    _setConnStatus('reconnecting');
+    window._dashHealth.ws = 'reconnecting';
+    updateHealthPanel();
+    setTimeout(connect, _wsBackoffMs);
+    _wsBackoffMs = Math.min(_wsBackoffMs * 1.5, 30000);
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+      if ((d.bots && d.bots.length) || d.global_stats) {
+        window._dashHealth.api = 'ok';
+      }
+      applyDashboardPayload(d);
+    } catch (err) {
+      console.error('WebSocket message handling failed:', err);
+      window._dashHealth.ws = 'err';
+      updateHealthPanel();
+    }
   };
 }
 function renderAppConfig(cfg) {
@@ -1888,6 +2052,7 @@ function renderAppConfig(cfg) {
   const parts = [assets, interval ? `${interval} markets` : '', strat].filter(Boolean);
   el.textContent = parts.join(' · ');
 }
+bootstrapDashboard();
 connect();
 
 async function loadPositionsAndHistory() {
@@ -2469,8 +2634,6 @@ function renderCard(bot){
   const cumPos=(bot.cumulative_pnl||0)>=0;
   const inProfit=hasInv&&(bot.pnl_dollars||0)>0;
   const inLoss=hasInv&&(bot.pnl_dollars||0)<0;
-  const pairedMode=String(bot.strategy_mode||'')==='paired_inventory_accumulation'
-    || String(bot.strategy_label||'').startsWith('Paired');
   const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||(pairedMode?35:97));
   const stratLabel=bot.strategy_name||bot.strategy_label||(pairedMode?'Paired Inventory ≤ 98¢':`Buy ≥ ${entryC.toFixed(0)}¢ / Hold to Settle`);
   const limitC=Number(bot.buy_limit_price_c||0);
@@ -2915,6 +3078,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     active_connections.append(websocket)
     try:
+        try:
+            snap = build_dashboard_broadcast_payload()
+            await websocket.send_text(dashboard_json_dumps(snap))
+        except Exception as snap_err:
+            print(f"⚠️ WS initial snapshot failed: {snap_err}")
         while True:
             await asyncio.sleep(30)
     except WebSocketDisconnect:
@@ -2930,13 +3098,16 @@ async def health():
 
 @app.get("/api/status")
 async def api_status():
-    return {
-        "bots":          [bot.get_dashboard_data() for bot in bots] if bots else [],
-        "global_stats":  get_global_stats(),
-        "positions":     collect_open_positions(bots) if bots else [],
-        "trade_history": get_trade_history(10),
-        "config":        _app_config_payload(),
-    }
+    return JSONResponse(
+        _sanitize_for_json({
+            "bots":          [bot.get_dashboard_data() for bot in bots] if bots else [],
+            "global_stats":  get_global_stats(),
+            "positions":     collect_open_positions(bots) if bots else [],
+            "trade_history": get_trade_history(10),
+            "config":        _app_config_payload(),
+            "health":        dashboard_health_snapshot(),
+        })
+    )
 
 
 @app.get("/api/positions")

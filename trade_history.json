@@ -674,5 +674,70 @@
     "price": 0.54,
     "size": 5.0,
     "window": "5m"
+  },
+  {
+    "id": "eth:eth-updown-5m-1795644300:buy:NO:1795647982000:0.33:5.0",
+    "timestamp": "2026-11-25 23:06:22",
+    "timestamp_ms": 1795647982000,
+    "asset": "ETH",
+    "market": "Ethereum Up or Down - November 25, 5:05PM-5:10PM ET",
+    "slug": "eth-updown-5m-1795644300",
+    "action": "buy",
+    "side": "NO",
+    "price": 0.33,
+    "size": 5.0,
+    "window": "5m"
+  },
+  {
+    "id": "btc:btc-updown-5m-1795644300:buy:NO:1795647993000:0.31:5.0",
+    "timestamp": "2026-11-25 23:06:33",
+    "timestamp_ms": 1795647993000,
+    "asset": "BTC",
+    "market": "Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET",
+    "slug": "btc-updown-5m-1795644300",
+    "action": "buy",
+    "side": "NO",
+    "price": 0.31,
+    "size": 5.0,
+    "window": "5m"
+  },
+  {
+    "id": "btc:btc-updown-5m-1795644300:buy:YES:1795648031000:0.66:5.0",
+    "timestamp": "2026-11-25 23:07:11",
+    "timestamp_ms": 1795648031000,
+    "asset": "BTC",
+    "market": "Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET",
+    "slug": "btc-updown-5m-1795644300",
+    "action": "buy",
+    "side": "YES",
+    "price": 0.66,
+    "size": 5.0,
+    "window": "5m"
+  },
+  {
+    "id": "btc:btc-updown-5m-1795644300:buy:NO:1795648042000:0.31:5.0",
+    "timestamp": "2026-11-25 23:07:22",
+    "timestamp_ms": 1795648042000,
+    "asset": "BTC",
+    "market": "Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET",
+    "slug": "btc-updown-5m-1795644300",
+    "action": "buy",
+    "side": "NO",
+    "price": 0.31,
+    "size": 5.0,
+    "window": "5m"
+  },
+  {
+    "id": "btc:btc-updown-5m-1795644300:buy:NO:1795648059000:0.25:5.0",
+    "timestamp": "2026-11-25 23:07:39",
+    "timestamp_ms": 1795648059000,
+    "asset": "BTC",
+    "market": "Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET",
+    "slug": "btc-updown-5m-1795644300",
+    "action": "buy",
+    "side": "NO",
+    "price": 0.25,
+    "size": 5.0,
+    "window": "5m"
   }
 ]

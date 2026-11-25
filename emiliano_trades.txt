@@ -50,3 +50,8 @@
 2026-11-22 06:40:21 [DRY] BUY: NO @ 58c size=5.0000 | Market: Bitcoin Up or Down - November 22, 12:40AM-12:45AM ET
 2026-11-22 06:40:38 [DRY] SELL: NO @ 48c size=5.0000 | Market: Ethereum Up or Down - November 22, 12:40AM-12:45AM ET
 2026-11-22 06:41:25 [DRY] SELL: NO @ 54c size=5.0000 | Market: Bitcoin Up or Down - November 22, 12:40AM-12:45AM ET
+2026-11-25 23:06:22 [DRY] BUY: NO @ 33c size=5.0000 | Market: Ethereum Up or Down - November 25, 5:05PM-5:10PM ET
+2026-11-25 23:06:33 [DRY] BUY: NO @ 31c size=5.0000 | Market: Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET
+2026-11-25 23:07:11 [DRY] BUY: YES @ 66c size=5.0000 | Market: Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET
+2026-11-25 23:07:22 [DRY] BUY: NO @ 31c size=5.0000 | Market: Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET
+2026-11-25 23:07:39 [DRY] BUY: NO @ 25c size=5.0000 | Market: Bitcoin Up or Down - November 25, 5:05PM-5:10PM ET

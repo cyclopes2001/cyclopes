@@ -168,7 +168,14 @@ def _app_config_payload() -> dict:
             entry_c = round(wc0.paired_initial_entry_threshold * 100, 2)
             payload.update({
                 "strategy": "paired_inventory_accumulation",
-                "strategy_label": paired_strategy_label(wc0.target_combined_pair_cost),
+                "strategy_label": paired_strategy_label(
+                    wc0.target_combined_pair_cost,
+                    initial_entry_min_c=wc0.paired_initial_entry_threshold * 100,
+                ),
+                "initial_entry_direction": wc0.paired_initial_entry_direction,
+                "initial_entry_rule": (
+                    f"EXPENSIVE SIDE FIRST ≥ {wc0.paired_initial_entry_threshold * 100:.0f}¢"
+                ),
                 "minimum_entry_price_c": entry_c,
                 "entry_price_c": entry_c,
                 "target_combined_cost_c": round(wc0.target_combined_pair_cost * 100, 2),
@@ -2567,6 +2574,7 @@ function _renderPairedTerminalCard(bot){
     ${hedgePanels||'<div class="pair-panel mb-3"><div class="pair-panel-title">Hedge monitor</div><div class="text-xs text-zinc-500">Balanced — no unmatched hedge watch.</div></div>'}
     <div class="pair-panel mb-3">
       <div class="pair-panel-title">Strategy</div>
+      <div class="text-[10px] text-zinc-500 mb-1">${ui.initial_entry_rule||bot.initial_entry_rule||'EXPENSIVE SIDE FIRST ≥ 64¢'}</div>
       <div class="text-xs text-zinc-200">${ui.reason||bot.strategy_ui_reason||bot.latest_decision||'—'}</div>
     </div>
     <div class="pair-panel mb-2">
@@ -2634,7 +2642,7 @@ function renderCard(bot){
   const cumPos=(bot.cumulative_pnl||0)>=0;
   const inProfit=hasInv&&(bot.pnl_dollars||0)>0;
   const inLoss=hasInv&&(bot.pnl_dollars||0)<0;
-  const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||(pairedMode?35:97));
+  const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||(pairedMode?64:97));
   const stratLabel=bot.strategy_name||bot.strategy_label||(pairedMode?'Paired Inventory ≤ 98¢':`Buy ≥ ${entryC.toFixed(0)}¢ / Hold to Settle`);
   const limitC=Number(bot.buy_limit_price_c||0);
   const stopPct=Number(bot.stop_loss_pct||0.50);

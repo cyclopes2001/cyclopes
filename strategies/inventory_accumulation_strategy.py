@@ -18,6 +18,7 @@ from utils.graceful_shutdown import shutdown_requested
 from utils.inventory_strategy_store import AccumulationPhase, inventory_strategy_store
 from utils.market_time_phases import MarketPhase, PhasePolicy, resolve_phase
 from utils.paired_decision_engine import (
+    InitialEntryDirection,
     ActionKind,
     MarketQuoteView,
     PairedStrategyConfig,
@@ -58,10 +59,14 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
         ),
         force_exit_eval_seconds=float(getattr(wc, "paired_force_exit_eval_seconds", 45.0)),
     )
+    dir_raw = str(getattr(wc, "paired_initial_entry_direction", "EXPENSIVE_SIDE")).upper()
+    try:
+        entry_dir = InitialEntryDirection(dir_raw)
+    except ValueError:
+        entry_dir = InitialEntryDirection.EXPENSIVE_SIDE
     return PairedStrategyConfig(
-        initial_entry_threshold=float(
-            getattr(wc, "paired_initial_entry_threshold", getattr(wc, "cheap_side_max_price", 0.35))
-        ),
+        initial_entry_threshold=float(getattr(wc, "paired_initial_entry_threshold", 0.64)),
+        initial_entry_direction=entry_dir,
         target_combined_cost=float(
             getattr(wc, "target_combined_pair_cost", getattr(wc, "inventory_max_pair_cost", 0.98))
         ),
@@ -279,11 +284,18 @@ class InventoryAccumulationStrategy:
             market_resolved=market_resolved,
             reserved_capital_usd=self._reserved_capital(worker),
             allow_new_accumulation=phase_allows_new_accumulation(seconds_left, cfg.phase_policy),
+            initial_entry_threshold=cfg.initial_entry_threshold,
+            initial_entry_direction=cfg.initial_entry_direction.value,
         )
+
+        from utils.strategy_display import paired_strategy_label
 
         worker.dashboard["strategy_mode"] = "paired_inventory_accumulation"
         worker.dashboard["strategy_name"] = "Paired Inventory Accumulation"
-        worker.dashboard["strategy_label"] = "Paired Inventory ≤ 98¢"
+        worker.dashboard["strategy_label"] = paired_strategy_label(
+            cfg.target_combined_cost,
+            initial_entry_min_c=cfg.initial_entry_threshold * 100,
+        )
         worker.dashboard["execution_type"] = "FOK"
         worker.dashboard["paired"] = paired
         worker.dashboard["strategy_state"] = action.kind.value.lower() if action else "idle"
@@ -321,6 +333,12 @@ class InventoryAccumulationStrategy:
         worker.dashboard["realized_pnl"] = paired["economics"]["realized_pnl_usd"]
         worker.dashboard["unrealized_pnl"] = round(unreal, 4)
         worker.dashboard["initial_entry_threshold_c"] = round(cfg.initial_entry_threshold * 100, 2)
+        worker.dashboard["initial_entry_direction"] = cfg.initial_entry_direction.value
+        worker.dashboard["initial_entry_rule"] = (
+            f"EXPENSIVE SIDE FIRST ≥ {cfg.initial_entry_threshold * 100:.0f}¢"
+            if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
+            else f"CHEAP SIDE FIRST ≤ {cfg.initial_entry_threshold * 100:.0f}¢"
+        )
         worker.dashboard["dry_run"] = bool(worker.is_dry_run())
         worker.dashboard["live_trading_enabled"] = bool(cfg.live_trading_enabled)
         worker.dashboard["allow_new_accumulation"] = paired["strategy_ui"]["allow_new_accumulation"]

@@ -8,8 +8,9 @@ This is an **inventory pairing** strategy, not directional prediction.
 
 ## Rules
 
-1. **Initial entry** when either side’s executable ask is ≤ **35¢** (configurable).
-2. Buy the cheaper eligible side (minimum **5** shares).
+1. **Initial entry** when the **more expensive** side’s executable ask is ≥ **64¢**
+   (`paired_initial_entry_direction=EXPENSIVE_SIDE`, configurable).
+2. Buy that expensive first leg (minimum **5** shares), then hedge the opposite side.
 3. **Hedge** the opposite side only when  
    `opposite_ask ≤ 0.98 − unmatched_average_cost` (fees/slippage included).
 4. Soft unmatched target: **5** shares. Adaptive DCA may exceed this only when
@@ -22,7 +23,8 @@ This is an **inventory pairing** strategy, not directional prediction.
 
 | Knob | Default | Meaning |
 |---|---|---|
-| `paired_initial_entry_threshold` | `0.35` | Max ask for initial entry |
+| `paired_initial_entry_threshold` | `0.64` | Min ask for expensive-side initial entry |
+| `paired_initial_entry_direction` | `EXPENSIVE_SIDE` | First leg selection rule |
 | `target_combined_pair_cost` | `0.98` | Max combined pair cost |
 | `paired_max_inventory_per_side` | `15` | Hard inventory cap |
 | `paired_unmatched_inventory_target` | `5` | Soft unmatched target |

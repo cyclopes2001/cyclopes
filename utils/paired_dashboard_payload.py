@@ -458,6 +458,8 @@ def build_paired_dashboard(
     market_resolved: bool,
     reserved_capital_usd: float,
     allow_new_accumulation: bool,
+    initial_entry_threshold: float = 0.64,
+    initial_entry_direction: str = "EXPENSIVE_SIDE",
 ) -> Dict[str, Any]:
     m = ledger.metrics()
     cap = capital_breakdown(ledger)
@@ -559,6 +561,13 @@ def build_paired_dashboard(
             "phase": phase.value,
             "seconds_left": int(seconds_left),
             "allow_new_accumulation": bool(allow_new_accumulation),
+            "initial_entry_direction": initial_entry_direction,
+            "initial_entry_threshold_c": _cents(initial_entry_threshold),
+            "initial_entry_rule": (
+                f"EXPENSIVE SIDE FIRST ≥ {_cents(initial_entry_threshold):.0f}¢"
+                if initial_entry_direction == "EXPENSIVE_SIDE"
+                else f"CHEAP SIDE FIRST ≤ {_cents(initial_entry_threshold):.0f}¢"
+            ),
         },
         "execution_history": history,
         "decision_feed": list(decision_feed)[:100],

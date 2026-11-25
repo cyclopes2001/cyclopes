@@ -113,7 +113,7 @@ class AdaptiveDcaTests(unittest.TestCase):
 class DecisionEngineTests(unittest.TestCase):
     def _cfg(self) -> PairedStrategyConfig:
         return PairedStrategyConfig(
-            initial_entry_threshold=0.35,
+            initial_entry_threshold=0.64,
             target_combined_cost=0.98,
             max_combined_cost=0.98,
             phase_policy=PhasePolicy(
@@ -125,24 +125,24 @@ class DecisionEngineTests(unittest.TestCase):
             slippage_reserve=0.0,
         )
 
-    def test_initial_entry_picks_cheaper_side(self):
+    def test_initial_entry_picks_expensive_side(self):
         ledger = PairedInventoryLedger()
-        quotes = MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)
+        quotes = MarketQuoteView(0.33, 0.67, 0.32, 0.66, 20, 20, 20, 20)
         act = decide(ledger, quotes, self._cfg(), seconds_left=250)
         self.assertEqual(act.kind, ActionKind.BUY_ENTRY)
-        self.assertEqual(act.side, "YES")
+        self.assertEqual(act.side, "NO")
 
     def test_hedge_approved_at_threshold(self):
         ledger = PairedInventoryLedger()
-        ledger.record_buy("YES", 5, 0.34)
-        quotes = MarketQuoteView(0.40, 0.64, 0.39, 0.63, 20, 20, 20, 20)
+        ledger.record_buy("YES", 5, 0.67)
+        quotes = MarketQuoteView(0.40, 0.31, 0.39, 0.30, 20, 20, 20, 20)
         act = decide(ledger, quotes, self._cfg(), seconds_left=200)
         self.assertEqual(act.kind, ActionKind.BUY_HEDGE)
         self.assertEqual(act.side, "NO")
 
     def test_hedge_rejected_when_too_expensive(self):
         ledger = PairedInventoryLedger()
-        ledger.record_buy("YES", 5, 0.34)
+        ledger.record_buy("YES", 5, 0.67)
         quotes = MarketQuoteView(0.40, 0.76, 0.39, 0.75, 20, 20, 20, 20)
         act = decide(ledger, quotes, self._cfg(), seconds_left=200)
         self.assertIn(act.kind, (ActionKind.REJECT, ActionKind.WAIT))
@@ -152,7 +152,7 @@ class DecisionEngineTests(unittest.TestCase):
 
     def test_late_phase_blocks_new_entry(self):
         ledger = PairedInventoryLedger()
-        quotes = MarketQuoteView(0.30, 0.70, 0.29, 0.69, 20, 20, 20, 20)
+        quotes = MarketQuoteView(0.30, 0.70, 0.29, 0.69, 20, 20, 20, 20)  # UP cheap — no new entry in late phase
         act = decide(ledger, quotes, self._cfg(), seconds_left=50)
         self.assertNotEqual(act.kind, ActionKind.BUY_ENTRY)
 

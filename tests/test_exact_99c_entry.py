@@ -8,7 +8,7 @@ class PairedEntryConfigTests(unittest.TestCase):
 
         wc = load_worker_configs()[0]
         self.assertEqual(wc.strategy_mode, "paired_inventory_accumulation")
-        self.assertAlmostEqual(wc.paired_initial_entry_threshold, 0.35)
+        self.assertAlmostEqual(wc.paired_initial_entry_threshold, 0.64)
         self.assertAlmostEqual(wc.target_combined_pair_cost, 0.98)
 
     def test_polymarket_tick_drives_strategy(self):

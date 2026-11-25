@@ -12,9 +12,14 @@ def strategy_label_from_entry(entry_price: float, *, hold_to_settle: bool = True
     return f"Buy ≥ {cents}¢"
 
 
-def paired_strategy_label(target_combined: float = 0.98) -> str:
+def paired_strategy_label(
+    target_combined: float = 0.98,
+    *,
+    initial_entry_min_c: float = 64.0,
+) -> str:
     cents = round(float(target_combined) * 100)
-    return f"Paired Inventory ≤ {cents}¢"
+    entry = round(float(initial_entry_min_c))
+    return f"Paired ≤ {cents}¢ · Expensive first ≥ {entry}¢"
 
 
 def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -> str:
@@ -68,7 +73,8 @@ def enrich_dashboard_payload(d: Mapping[str, Any]) -> dict[str, Any]:
         target = float(out.get("target_combined_cost_c") or 98) / 100.0
         if out.get("target_combined_cost"):
             target = float(out["target_combined_cost"])
-        label = paired_strategy_label(target)
+        init_c = float(out.get("initial_entry_threshold_c") or 64.0)
+        label = paired_strategy_label(target, initial_entry_min_c=init_c)
         out["strategy_name"] = out.get("strategy_name") or label
         out["strategy_label"] = out.get("strategy_label") or label
     else:

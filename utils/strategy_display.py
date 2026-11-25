@@ -12,6 +12,11 @@ def strategy_label_from_entry(entry_price: float, *, hold_to_settle: bool = True
     return f"Buy ≥ {cents}¢"
 
 
+def paired_strategy_label(target_combined: float = 0.98) -> str:
+    cents = round(float(target_combined) * 100)
+    return f"Paired Inventory ≤ {cents}¢"
+
+
 def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -> str:
     key = (raw or "idle").strip().lower()
     if stopped_out and not has_position:
@@ -19,8 +24,17 @@ def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -
     mapping = {
         "idle": "WAITING FOR ENTRY",
         "waiting": "WAITING FOR ENTRY",
+        "wait": "MONITORING",
+        "reject": "BLOCKED",
+        "buy_entry": "INITIAL ENTRY",
+        "buy_dca": "ADAPTIVE DCA",
+        "buy_hedge": "HEDGING",
+        "exit": "EXITING UNMATCHED",
         "entry_eligible": "ENTRY ELIGIBLE — BUY",
         "entry_pending": "BUY ORDER SUBMITTED",
+        "paired_entry_pending": "ENTRY ORDER SUBMITTED",
+        "paired_dca_pending": "DCA ORDER SUBMITTED",
+        "paired_hedge_pending": "HEDGE ORDER SUBMITTED",
         "in_position": "POSITION OPEN",
         "holding_to_settle": "HOLDING TO SETTLE",
         "position_open": "POSITION OPEN",
@@ -40,12 +54,21 @@ def display_strategy_state(raw: str, *, stopped_out: bool, has_position: bool) -
 
 def enrich_dashboard_payload(d: Mapping[str, Any]) -> dict[str, Any]:
     out = dict(d)
-    entry = float(out.get("entry_price") or out.get("minimum_entry_price") or 0.97)
-    hold = bool(out.get("hold_to_settle", True))
-    label = strategy_label_from_entry(entry, hold_to_settle=hold)
-    out["strategy_name"] = label
-    out["strategy_label"] = label
-    out["execution_type"] = "FOK"
+    mode = str(out.get("strategy_mode") or "")
+    if mode == "paired_inventory_accumulation" or out.get("strategy_label", "").startswith("Paired"):
+        target = float(out.get("target_combined_cost_c") or 98) / 100.0
+        if out.get("target_combined_cost"):
+            target = float(out["target_combined_cost"])
+        label = paired_strategy_label(target)
+        out["strategy_name"] = out.get("strategy_name") or label
+        out["strategy_label"] = out.get("strategy_label") or label
+    else:
+        entry = float(out.get("entry_price") or out.get("minimum_entry_price") or 0.97)
+        hold = bool(out.get("hold_to_settle", True))
+        label = strategy_label_from_entry(entry, hold_to_settle=hold)
+        out["strategy_name"] = label
+        out["strategy_label"] = label
+    out["execution_type"] = out.get("execution_type") or "FOK"
     stopped = bool(out.get("market_stopped_out"))
     has_pos = float(out.get("position_size") or 0) > 0
     raw = str(out.get("strategy_state") or "idle")

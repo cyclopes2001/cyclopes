@@ -1,5 +1,5 @@
+from strategies.directional_fok_strategy import DirectionalFokStrategy
 from strategies.inventory_accumulation_strategy import (
-    DirectionalFokStrategy,
     GabagoolStrategy,
     InventoryAccumulationStrategy,
     LateEntryStrategy,

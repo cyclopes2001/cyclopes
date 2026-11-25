@@ -157,26 +157,42 @@ def _app_config_payload() -> dict:
         ],
         "market_interval":          "5m",
         "trading_assets_label":     trading_assets_label(),
-        "strategy":                 "high_confidence_entry",
-        "strategy_label":           "Buy ≥ 97¢ / Hold to Settle",
+        "strategy":                 "paired_inventory_accumulation",
+        "strategy_label":           "Paired Inventory ≤ 98¢",
     }
     if wc0 is not None:
-        from utils.strategy_display import strategy_label_from_entry
+        from utils.strategy_display import paired_strategy_label, strategy_label_from_entry
 
-        entry_c = round(wc0.entry_price * 100, 2)
-        payload.update({
-            "strategy_label": strategy_label_from_entry(
-                wc0.entry_price, hold_to_settle=wc0.hold_to_settle,
-            ),
-            "minimum_entry_price_c": entry_c,
-            "entry_price_c": entry_c,
-            "entry_window_seconds": wc0.entry_window_seconds,
-            "stop_loss_pct": wc0.stop_loss_pct,
-            "take_profit_pct": wc0.take_profit_pct,
-            "hold_to_settle": wc0.hold_to_settle,
-            "order_size": wc0.order_size_max,
-            "execution_type": "FOK",
-        })
+        if getattr(wc0, "strategy_mode", "") == "paired_inventory_accumulation":
+            entry_c = round(wc0.paired_initial_entry_threshold * 100, 2)
+            payload.update({
+                "strategy": "paired_inventory_accumulation",
+                "strategy_label": paired_strategy_label(wc0.target_combined_pair_cost),
+                "minimum_entry_price_c": entry_c,
+                "entry_price_c": entry_c,
+                "target_combined_cost_c": round(wc0.target_combined_pair_cost * 100, 2),
+                "max_inventory_per_side": wc0.paired_max_inventory_per_side,
+                "unmatched_inventory_target": wc0.paired_unmatched_inventory_target,
+                "paired_live_trading_enabled": wc0.paired_live_trading_enabled,
+                "dry_run": wc0.dry_run,
+                "order_size": wc0.order_size_max,
+                "execution_type": "FOK",
+            })
+        else:
+            entry_c = round(wc0.entry_price * 100, 2)
+            payload.update({
+                "strategy_label": strategy_label_from_entry(
+                    wc0.entry_price, hold_to_settle=wc0.hold_to_settle,
+                ),
+                "minimum_entry_price_c": entry_c,
+                "entry_price_c": entry_c,
+                "entry_window_seconds": wc0.entry_window_seconds,
+                "stop_loss_pct": wc0.stop_loss_pct,
+                "take_profit_pct": wc0.take_profit_pct,
+                "hold_to_settle": wc0.hold_to_settle,
+                "order_size": wc0.order_size_max,
+                "execution_type": "FOK",
+            })
     return payload
 
 
@@ -2306,8 +2322,10 @@ function renderCard(bot){
   const cumPos=(bot.cumulative_pnl||0)>=0;
   const inProfit=hasInv&&(bot.pnl_dollars||0)>0;
   const inLoss=hasInv&&(bot.pnl_dollars||0)<0;
-  const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||97);
-  const stratLabel=bot.strategy_name||bot.strategy_label||`Buy ≥ ${entryC.toFixed(0)}¢ / Hold to Settle`;
+  const pairedMode=String(bot.strategy_mode||'')==='paired_inventory_accumulation'
+    || String(bot.strategy_label||'').startsWith('Paired');
+  const entryC=Number(bot.minimum_entry_price_c||bot.entry_price_c||bot.configured_entry_price_c||(pairedMode?35:97));
+  const stratLabel=bot.strategy_name||bot.strategy_label||(pairedMode?'Paired Inventory ≤ 98¢':`Buy ≥ ${entryC.toFixed(0)}¢ / Hold to Settle`);
   const limitC=Number(bot.buy_limit_price_c||0);
   const stopPct=Number(bot.stop_loss_pct||0.50);
   const tpPct=Number(bot.take_profit_pct||0.50);
@@ -2330,6 +2348,16 @@ function renderCard(bot){
   if(stoppedOut&&!hasPos) signal=String(bot.market_outcome_stamp||'MARKET BLOCKED AFTER EXIT');
   const yesAskC=Number(bot.yes_ask_c||bot.yes||0);
   const noAskC=Number(bot.no_ask_c||bot.no||0);
+  const matchedSh=Number(bot.matched_shares||0);
+  const unmatchedUp=Number(bot.unmatched_up||0);
+  const unmatchedDown=Number(bot.unmatched_down||0);
+  const maxHedgeUpC=Number(bot.max_hedge_up_c||0);
+  const maxHedgeDownC=Number(bot.max_hedge_down_c||0);
+  const pairCostC=Number(bot.combined_pair_cost_c||bot.pair_avg_price_c||0);
+  const phase=String(bot.market_phase||'');
+  const latestDecision=String(bot.latest_decision||bot.entry_block_reason||'');
+  const capital=Number(bot.capital_committed||0);
+  const dcaLegs=Number(bot.dca_legs||0);
   const wins=bot.wins??0;const losses=bot.losses??0;
   const trades=bot.trade_count??0;const wr=bot.win_rate??0;
   const mw=formatMarketWindow(bot.market_start_iso,bot.market_end_iso);
@@ -2373,13 +2401,27 @@ function renderCard(bot){
           ${sigIcon(signal)} ${signal}
         </span>
         <div class="text-xs text-zinc-400 font-mono">
-          ask ≥ <span class="text-orange-400">${entryC.toFixed(0)}¢</span>
-          &nbsp;· stop <span class="text-red-400">${(stopPct*100).toFixed(0)}%</span>
-          &nbsp;· TP <span class="text-accent">${(tpPct*100).toFixed(0)}%</span>
+          ${pairedMode
+            ? `entry ≤ <span class="text-orange-400">${entryC.toFixed(0)}¢</span>
+              &nbsp;· pair ≤ <span class="text-accent">${Number(bot.target_combined_cost_c||98).toFixed(0)}¢</span>
+              &nbsp;· ${phase||'—'}`
+            : `ask ≥ <span class="text-orange-400">${entryC.toFixed(0)}¢</span>
+              &nbsp;· stop <span class="text-red-400">${(stopPct*100).toFixed(0)}%</span>
+              &nbsp;· TP <span class="text-accent">${(tpPct*100).toFixed(0)}%</span>`}
         </div>
       </div>
+      ${pairedMode?`
       <div class="bg-zinc-800/60 rounded-xl px-3 py-2 mb-3 text-xs font-mono text-zinc-300 grid grid-cols-2 gap-x-3 gap-y-1">
-        <span class="col-span-2">${stratLabel} · ${displayState}${bot.entry_block_reason?(' · '+bot.entry_block_reason):''}</span>
+        <span>UP inv ${Number(bot.up_inventory||bot.yes_shares||0).toFixed(0)} · unmatched ${unmatchedUp.toFixed(0)}</span>
+        <span>DOWN inv ${Number(bot.down_inventory||bot.no_shares||0).toFixed(0)} · unmatched ${unmatchedDown.toFixed(0)}</span>
+        <span>Matched ${matchedSh.toFixed(0)} · pair ${pairCostC.toFixed(1)}¢</span>
+        <span>Max hedge U/D ${maxHedgeUpC.toFixed(1)}¢ / ${maxHedgeDownC.toFixed(1)}¢</span>
+        <span>Avg UP ${(Number(bot.yes_avg_price_c)||0).toFixed(1)}¢ · DOWN ${(Number(bot.no_avg_price_c)||0).toFixed(1)}¢</span>
+        <span>DCA legs ${dcaLegs} · capital $${_fmtMoney(capital)}</span>
+        <span class="col-span-2 text-zinc-400">${latestDecision||'—'}</span>
+      </div>`:''}
+      <div class="bg-zinc-800/60 rounded-xl px-3 py-2 mb-3 text-xs font-mono text-zinc-300 grid grid-cols-2 gap-x-3 gap-y-1">
+        <span class="col-span-2">${stratLabel} · ${displayState}${(!pairedMode && bot.entry_block_reason)?(' · '+bot.entry_block_reason):''}</span>
         <span>Market: ${marketId||'—'}…</span>
         <span>Execution: ${execType} · ${orderSz?orderSz.toFixed(0)+' sh':'—'}</span>
         <span>UP ask: ${yesAskC?yesAskC.toFixed(1)+'c':'—'}</span>

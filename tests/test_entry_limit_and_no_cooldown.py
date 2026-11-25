@@ -43,8 +43,12 @@ class AssetCooldownRemovedTests(unittest.TestCase):
         self.assertNotIn("ASSET_COOLDOWN_MINUTES", source)
 
     def test_strategy_has_no_cooldown_gate(self):
-        source = Path("strategies/inventory_accumulation_strategy.py").read_text(encoding="utf-8")
-        self.assertNotIn("asset_cooldown", source)
+        for path in (
+            "strategies/inventory_accumulation_strategy.py",
+            "strategies/directional_fok_strategy.py",
+        ):
+            source = Path(path).read_text(encoding="utf-8")
+            self.assertNotIn("asset_cooldown", source)
 
 
 if __name__ == "__main__":

@@ -1,35 +1,48 @@
-# High-confidence ask entry (hold to settle)
+# Adaptive Paired Inventory Accumulation
 
-Active strategy: in the final entry window, if a Polymarket side is already at
-or above the configured entry floor, buy that leading side and **hold to settlement**.
+Active strategy: accumulate complementary Polymarket UP (YES) / DOWN (NO) shares
+on 5-minute crypto markets at a **combined acquisition cost ≤ 98¢**, then hold
+matched pairs to settlement.
+
+This is an **inventory pairing** strategy, not directional prediction.
 
 ## Rules
 
-1. Only evaluate in the configured entry window (default **final 60s**, with a
-   minimum seconds-left cutoff).
-2. Require best ask **≥ `entry_price`** (default **97¢**).
-3. Buy the leading side (higher ask); YES wins ties.
-4. Skip if the ask is above `max_price` (default **99¢**).
-5. Execute **FOK** at the ask.
-6. **Hold to settle** when `hold_to_settle=true` — otherwise stop-loss /
-   take-profit exits apply (`stop_loss_pct` default **50%**).
+1. **Initial entry** when either side’s executable ask is ≤ **35¢** (configurable).
+2. Buy the cheaper eligible side (minimum **5** shares).
+3. **Hedge** the opposite side only when  
+   `opposite_ask ≤ 0.98 − unmatched_average_cost` (fees/slippage included).
+4. Soft unmatched target: **5** shares. Adaptive DCA may exceed this only when
+   economics improve and a credible hedge exists (hard cap **15**/side).
+5. Operating phases by seconds left: EARLY → MIDDLE → LATE (configurable).
+6. Never force a hedge above the profitability threshold merely to equalize shares.
+7. Live trading requires `paired_live_trading_enabled=true` **and** `dry_run=false`.
 
 ## Defaults
 
 | Knob | Default | Meaning |
 |---|---|---|
-| `entry_price` | `0.97` | Minimum ask to enter (97¢+) |
-| `entry_window_seconds` | `60` | Final-window length |
-| `min_entry_seconds_left` | `15` | Cutoff before expiry |
-| `min_price` / `max_price` | `0.97` / `0.99` | Allowed ask band |
-| `stop_loss_pct` | `0.50` | Stop loss when not holding to settle |
-| `hold_to_settle` | `true` | No mid-trade exits |
-| `listener_activate_secs` | `90` | WS/poll active before entry window |
-| `dry_run` | `true` | Paper until validated |
+| `paired_initial_entry_threshold` | `0.35` | Max ask for initial entry |
+| `target_combined_pair_cost` | `0.98` | Max combined pair cost |
+| `paired_max_inventory_per_side` | `15` | Hard inventory cap |
+| `paired_unmatched_inventory_target` | `5` | Soft unmatched target |
+| `paired_dca_increment` / `min_order_size` | `5` | Order size |
+| `paired_max_dca_legs_per_side` | `3` | Max adaptive DCA legs |
+| `paired_live_trading_enabled` | `false` | Explicit live switch |
+| `dry_run` | `true` | Paper fills until validated |
 
 ## Setup
 
 1. `pip install -r requirements.txt`
 2. Configure `.env` locally (never commit secrets)
-3. Keep dry-run on until `[ENTRY]` logs look sane
+3. Keep `dry_run=true` and `paired_live_trading_enabled=false` until logs look sane
 4. Deploy via `Procfile` (`uvicorn main:app`)
+
+## Math
+
+```
+AVERAGE_COST = TOTAL_ACQUISITION_COST / TOTAL_SHARES
+NEW_AVERAGE_COST = (EXISTING_COST + NEW_QTY * NEW_PX) / (EXISTING + NEW_QTY)
+MAX_HEDGE = TARGET_COMBINED − UNMATCHED_AVERAGE_COST
+PAIR_COST = AVERAGE_UP + AVERAGE_DOWN   # must be ≤ 0.98 after fees
+```

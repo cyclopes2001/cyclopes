@@ -80,16 +80,16 @@ class StrategyIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_buy_when_ask_below_floor(self):
         from bot import OrderState
-        from strategies.inventory_accumulation_strategy import DirectionalFokStrategy
+        from strategies.directional_fok_strategy import DirectionalFokStrategy
 
         w = self._worker(yes=0.90, no=0.12, seconds_left=40)
         w.order_state = OrderState.IDLE
         strat = DirectionalFokStrategy()
         with patch("bot.is_trading_allowed", return_value=True), patch(
-            "strategies.inventory_accumulation_strategy.stopped_out_store.is_stopped_out",
+            "strategies.directional_fok_strategy.stopped_out_store.is_stopped_out",
             return_value=False,
         ), patch(
-            "strategies.inventory_accumulation_strategy.fok_buy_limit",
+            "strategies.directional_fok_strategy.fok_buy_limit",
             new_callable=AsyncMock,
         ) as mock_buy:
             await strat.on_market_tick(w)
@@ -98,7 +98,7 @@ class StrategyIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_buy_yes_when_ask_at_or_above_floor(self):
         from bot import OrderState
-        from strategies.inventory_accumulation_strategy import DirectionalFokStrategy
+        from strategies.directional_fok_strategy import DirectionalFokStrategy
 
         w = self._worker(yes=0.97, no=0.05, seconds_left=40)
         w.order_state = OrderState.IDLE
@@ -110,10 +110,10 @@ class StrategyIntegrationTests(unittest.IsolatedAsyncioTestCase):
             return 0.0, 0.0, None
 
         with patch("bot.is_trading_allowed", return_value=True), patch(
-            "strategies.inventory_accumulation_strategy.stopped_out_store.is_stopped_out",
+            "strategies.directional_fok_strategy.stopped_out_store.is_stopped_out",
             return_value=False,
         ), patch(
-            "strategies.inventory_accumulation_strategy.fok_buy_limit",
+            "strategies.directional_fok_strategy.fok_buy_limit",
             side_effect=_fake_buy,
         ) as mock_buy:
             await strat.on_market_tick(w)
@@ -121,7 +121,7 @@ class StrategyIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_hold_to_settle_skips_exits(self):
         from bot import OrderState
-        from strategies.inventory_accumulation_strategy import DirectionalFokStrategy
+        from strategies.directional_fok_strategy import DirectionalFokStrategy
 
         w = self._worker(yes=0.97, no=0.05, seconds_left=40)
         w.order_state = OrderState.IDLE
@@ -133,7 +133,7 @@ class StrategyIntegrationTests(unittest.IsolatedAsyncioTestCase):
         strat = DirectionalFokStrategy()
 
         with patch(
-            "strategies.inventory_accumulation_strategy.fok_sell_with_retries",
+            "strategies.directional_fok_strategy.fok_sell_with_retries",
             new_callable=AsyncMock,
         ) as mock_sell:
             await strat.on_market_tick(w)

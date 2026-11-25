@@ -1,534 +1,522 @@
-"""Late-window FOK: buy leading side at/above configured entry price → hold to settle."""
+"""Adaptive paired inventory accumulation for Polymarket 5-minute UP/DOWN markets.
+
+Accumulate complementary YES (UP) / NO (DOWN) shares at a combined acquisition
+cost of <= target (default 98¢), with adaptive DCA, dynamic hedge pricing,
+phase-aware risk controls, and persistent pairing ledger.
+"""
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from typing import TYPE_CHECKING, Optional
 
 from strategies.fok_execution import fok_buy_limit, fok_sell_with_retries
-from utils.directional_entry import EntryDecision, pick_entry_side
-from utils.entry_limit import (
-    compute_buy_fok_limit_price,
-    resolve_max_entry_price,
-    resolve_minimum_entry_price,
-)
 from utils.graceful_shutdown import shutdown_requested
-from utils.momentum_risk import (
-    stop_loss_price,
-    stop_loss_triggered,
-    take_profit_price,
-    take_profit_triggered,
+from utils.inventory_strategy_store import AccumulationPhase, inventory_strategy_store
+from utils.market_time_phases import MarketPhase, PhasePolicy, resolve_phase
+from utils.paired_decision_engine import (
+    ActionKind,
+    MarketQuoteView,
+    PairedStrategyConfig,
+    StrategyAction,
+    decide,
+    max_hedge_prices,
 )
+from utils.paired_inventory_ledger import PairedInventoryLedger
 from utils.profitability_gate import check_executable_depth
-from utils.stopped_out_store import stopped_out_store
+
 if TYPE_CHECKING:
     from bot import MarketWorker
 
-_LOG = logging.getLogger("high_confidence_entry")
+_LOG = logging.getLogger("paired_inventory")
+_EPS = 1e-9
 
 
-class DirectionalFokStrategy:
+def _ledger_path(worker_key: str) -> str:
+    safe = worker_key.replace(":", "_")
+    base = os.getenv("PAIRED_LEDGER_DIR", ".")
+    return os.path.join(base, f"paired_ledger_{safe}.json")
+
+
+def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
+    wc = worker.worker_config
+    policy = PhasePolicy(
+        early_min_seconds_left=float(getattr(wc, "paired_early_min_seconds_left", 180.0)),
+        middle_min_seconds_left=float(getattr(wc, "paired_middle_min_seconds_left", 60.0)),
+        late_min_seconds_left=0.0,
+        stop_new_accumulation_seconds=float(
+            getattr(wc, "paired_stop_new_accumulation_seconds", 90.0)
+        ),
+        force_exit_eval_seconds=float(getattr(wc, "paired_force_exit_eval_seconds", 45.0)),
+    )
+    return PairedStrategyConfig(
+        initial_entry_threshold=float(
+            getattr(wc, "paired_initial_entry_threshold", getattr(wc, "cheap_side_max_price", 0.35))
+        ),
+        target_combined_cost=float(
+            getattr(wc, "target_combined_pair_cost", getattr(wc, "inventory_max_pair_cost", 0.98))
+        ),
+        max_combined_cost=float(
+            getattr(wc, "max_combined_pair_cost", getattr(wc, "inventory_max_pair_cost", 0.98))
+        ),
+        max_inventory_per_side=float(getattr(wc, "paired_max_inventory_per_side", wc.max_shares)),
+        min_order_size=float(wc.min_order_size),
+        dca_increment=float(getattr(wc, "paired_dca_increment", wc.order_size_max)),
+        max_dca_legs_per_side=int(getattr(wc, "paired_max_dca_legs_per_side", 3)),
+        unmatched_inventory_target=float(
+            getattr(wc, "paired_unmatched_inventory_target", 5.0)
+        ),
+        allow_adaptive_dca=bool(getattr(wc, "paired_allow_adaptive_dca", True)),
+        enable_dynamic_hedge_pricing=bool(
+            getattr(wc, "paired_enable_dynamic_hedge_pricing", True)
+        ),
+        enable_adaptive_hedge_timeout=bool(
+            getattr(wc, "paired_enable_adaptive_hedge_timeout", True)
+        ),
+        enable_adaptive_risk=bool(getattr(wc, "paired_enable_adaptive_risk", True)),
+        fee_rate=float(wc.spread_capture_fee_rate),
+        slippage_reserve=float(wc.spread_capture_slippage_buffer),
+        min_net_profit_per_pair=float(wc.min_net_profit_per_pair),
+        min_orderbook_depth=float(wc.min_orderbook_depth),
+        phase_policy=policy,
+        exit_max_loss_fraction=float(getattr(wc, "paired_exit_max_loss_fraction", 0.35)),
+        live_trading_enabled=bool(getattr(wc, "paired_live_trading_enabled", False)),
+    )
+
+
+class InventoryAccumulationStrategy:
+    """Paired UP/DOWN inventory accumulation with adaptive DCA."""
+
+    def __init__(self) -> None:
+        self._ledgers: dict[str, PairedInventoryLedger] = {}
+        self._last_decision_sig: dict[str, str] = {}
+        self._order_in_flight: dict[str, bool] = {}
+
     def _key(self, worker: "MarketWorker") -> str:
         return worker.worker_config.key
 
-    def _position_side(self, worker: "MarketWorker") -> Optional[str]:
-        inv = worker.inventory
-        ys, ns = inv.yes_shares, inv.no_shares
-        from bot import MIN_SHARES
-
-        if ys >= MIN_SHARES - 1e-9 and ns >= MIN_SHARES - 1e-9:
-            return worker.dashboard.get("position_side") or worker.position_side
-        if ys >= MIN_SHARES - 1e-9:
-            return "YES"
-        if ns >= MIN_SHARES - 1e-9:
-            return "NO"
-        return None
-
-    def _publish_dashboard(self, worker: "MarketWorker") -> None:
-        cfg = worker.worker_config
+    def _ledger(self, worker: "MarketWorker") -> PairedInventoryLedger:
+        key = self._key(worker)
         cid = worker.canonical_market_id() or ""
-        wkey = self._key(worker)
-        stopped = stopped_out_store.is_stopped_out(wkey, cid) if cid else False
-        side = self._position_side(worker)
-        inv = worker.inventory
-        min_res = resolve_minimum_entry_price(cfg.entry_price)
-        max_res = resolve_max_entry_price(cfg.latency_arb_max_ask)
-        worker.dashboard["minimum_entry_price"] = min_res.minimum_price
-        worker.dashboard["minimum_entry_price_c"] = round(min_res.minimum_price * 100, 2)
-        worker.dashboard["max_entry_price"] = max_res.max_price
-        worker.dashboard["max_entry_price_c"] = round(max_res.max_price * 100, 2)
-        worker.dashboard["configured_entry_price"] = min_res.configured_entry
-        worker.dashboard["configured_entry_price_c"] = round(min_res.configured_entry * 100, 2)
-        worker.dashboard["entry_window_seconds"] = int(cfg.entry_window_seconds)
-        worker.dashboard["stop_loss_pct"] = cfg.stop_loss_pct
-        worker.dashboard["take_profit_pct"] = cfg.take_profit_pct
-        worker.dashboard["order_size"] = cfg.order_size_max
-        worker.dashboard["execution_type"] = "FOK"
-        worker.dashboard["strategy_mode"] = "high_confidence_entry"
-        worker.dashboard["hold_to_settle"] = bool(getattr(cfg, "hold_to_settle", True))
-        worker.dashboard["market_id"] = cid
-        worker.dashboard["market_stopped_out"] = stopped
-        worker.dashboard["position_side"] = side or ""
-        worker.dashboard["yes_ask"] = round(float(worker.best_ask("YES")), 4)
-        worker.dashboard["no_ask"] = round(float(worker.best_ask("NO")), 4)
-        worker.dashboard["yes_ask_c"] = round(worker.dashboard["yes_ask"] * 100, 2)
-        worker.dashboard["no_ask_c"] = round(worker.dashboard["no_ask"] * 100, 2)
-        if side:
-            entry = inv.avg_cost(side)
-            worker.dashboard["entry_fill_price"] = round(entry, 4)
-            worker.dashboard["entry_fill_price_c"] = round(entry * 100, 2)
-            worker.dashboard["position_size"] = round(inv.shares(side), 4)
-            bid = worker.best_bid(side)
-            worker.dashboard["executable_bid"] = round(bid, 4)
-            worker.dashboard["executable_bid_c"] = round(bid * 100, 2) if bid > 0 else 0
-            stop_px = stop_loss_price(entry, cfg.stop_loss_pct)
-            worker.dashboard["stop_loss_trigger_price"] = round(stop_px, 4)
-            worker.dashboard["stop_loss_trigger_c"] = round(stop_px * 100, 2)
-            tp_px = take_profit_price(entry, cfg.take_profit_pct)
-            worker.dashboard["take_profit_trigger_price"] = round(tp_px, 4)
-            worker.dashboard["take_profit_trigger_c"] = round(tp_px * 100, 2)
-            mark = bid * inv.shares(side) if bid > 0 else 0.0
-            worker.dashboard["unrealized_pnl"] = round(mark - entry * inv.shares(side), 4)
-        elif worker.dashboard.get("entry_order_status") != "FILLED":
-            worker.dashboard["entry_fill_price"] = 0.0
-            worker.dashboard["entry_fill_price_c"] = 0.0
-            worker.dashboard["position_size"] = 0.0
-            worker.dashboard["executable_bid"] = 0.0
-            worker.dashboard["executable_bid_c"] = 0.0
-            worker.dashboard["stop_loss_trigger_price"] = 0.0
-            worker.dashboard["stop_loss_trigger_c"] = 0.0
-            worker.dashboard["take_profit_trigger_price"] = 0.0
-            worker.dashboard["take_profit_trigger_c"] = 0.0
-            worker.dashboard["unrealized_pnl"] = 0.0
-        worker.dashboard["realized_pnl"] = round(inv.realized_pnl, 4)
+        ledger = self._ledgers.get(key)
+        if ledger is None:
+            ledger = self._load_ledger(key)
+            self._ledgers[key] = ledger
+        if cid and ledger.market_id and ledger.market_id != cid:
+            ledger.reset(cid)
+            self._persist_ledger(key, ledger)
+        elif cid and not ledger.market_id:
+            ledger.market_id = cid
+        return ledger
 
-    def _market_ready(self, worker: "MarketWorker") -> Optional[str]:
-        from bot import is_locked_price
+    def _load_ledger(self, worker_key: str) -> PairedInventoryLedger:
+        path = _ledger_path(worker_key)
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return PairedInventoryLedger.from_dict(json.load(f))
+            except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                _LOG.warning("failed to load paired ledger %s: %s", path, exc)
+        return PairedInventoryLedger()
 
-        if not worker.active_market:
-            return "no_active_market"
-        if not worker.canonical_market_id():
-            return "missing_condition_id"
-        if worker.market_seconds_left() <= 0:
-            return "market_closed"
-        y = float(worker.best_ask("YES"))
-        n = float(worker.best_ask("NO"))
-        if y <= 0 and n <= 0:
-            return "missing_quotes"
-        if y > 0 and is_locked_price(y):
-            return "locked_outcome_price"
-        if n > 0 and is_locked_price(n):
-            return "locked_outcome_price"
-        return None
+    def _persist_ledger(self, worker_key: str, ledger: PairedInventoryLedger) -> None:
+        path = _ledger_path(worker_key)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(ledger.to_dict(), f, indent=2)
+        except OSError as exc:
+            _LOG.warning("failed to persist paired ledger %s: %s", path, exc)
 
-    async def _record_buy(
-        self,
-        worker: "MarketWorker",
-        side: str,
-        qty: float,
-        fill_px: float,
-        limit_px: float,
-        oid: Optional[str],
-    ) -> None:
-        if oid and not worker.record_fill_idempotent(oid, side, qty, fill_px):
-            return
-        worker.inventory.record_buy(side, qty, fill_px)
-        worker.entry_count = 1
-        worker.position_side = side
-        worker.position_size = qty
-        worker.entry_price = fill_px
-        worker.entry_timestamp = time.time()
-        from bot import TradeState
-
-        worker.trade_state = TradeState.FILLED
-        worker.log_trade(side, fill_px, "BUY", size=qty, order_id=oid)
-        worker.dashboard["buy_limit_price"] = limit_px
-        worker.dashboard["buy_limit_price_c"] = round(limit_px * 100, 2)
-        worker.dashboard["entry_fill_price"] = round(fill_px, 4)
-        worker.dashboard["entry_fill_price_c"] = round(fill_px * 100, 2)
-        worker.dashboard["filled_size"] = round(qty, 4)
-        worker.dashboard["entry_order_status"] = "FILLED"
-        worker.dashboard["strategy_state"] = "in_position"
-        worker.dashboard["bought_side"] = side
-        label = f"{worker.asset_type.upper()} {worker.window_slug}"
-        print(
-            f"✅ [BUY FILLED] {label} | {side} | limit_price={limit_px:.4f} | "
-            f"avg_fill_price={fill_px:.4f} | filled_size={qty:.2f}"
+    def _quotes(self, worker: "MarketWorker") -> MarketQuoteView:
+        worker.refresh_order_book("YES")
+        worker.refresh_order_book("NO")
+        yes_exe = worker.executable_buy("YES", float(worker.worker_config.min_order_size))
+        no_exe = worker.executable_buy("NO", float(worker.worker_config.min_order_size))
+        return MarketQuoteView(
+            yes_ask=float(worker.best_ask("YES")),
+            no_ask=float(worker.best_ask("NO")),
+            yes_bid=float(worker.best_bid("YES")),
+            no_bid=float(worker.best_bid("NO")),
+            yes_ask_size=float(yes_exe[1]) if yes_exe else float(worker.best_ask_size("YES")),
+            no_ask_size=float(no_exe[1]) if no_exe else float(worker.best_ask_size("NO")),
+            yes_bid_size=float(worker.best_ask_size("YES")),  # best available proxy
+            no_bid_size=float(worker.best_ask_size("NO")),
         )
 
-    async def _record_exit_sell(
-        self,
-        worker: "MarketWorker",
-        side: str,
-        qty: float,
-        px: float,
-        oid: Optional[str],
-        *,
-        exit_kind: str,
-    ) -> None:
-        if oid and oid not in ("stop-loss", "take-profit", "dry-run") and not worker.record_fill_idempotent(
-            oid, side, qty, px,
-        ):
-            return
-        entry_avg = worker.inventory.avg_cost(side)
-        side_label = "Up" if side == "YES" else "Down"
-        trade_pnl = worker.inventory.record_sell(side, qty, px)
-        worker.log_trade(side, px, "SELL", size=qty, order_id=oid)
-        remaining = worker.inventory.shares(side)
-        worker.dashboard["realized_pnl"] = round(worker.inventory.realized_pnl, 4)
-        worker.dashboard["exit_fill_price"] = round(px, 4)
-        worker.dashboard["exit_fill_price_c"] = round(px * 100, 2)
-        stamp = "STOP LOSS" if exit_kind == "STOP_LOSS" else "TAKE PROFIT"
-        if remaining <= 1e-6:
-            worker.dashboard["exit_order_status"] = "FILLED"
-            worker.dashboard["strategy_state"] = "position_closed"
-            worker.position_side = None
-            worker.position_size = 0.0
-            worker.entry_price = 0.0
-            worker.dashboard["buy_limit_price"] = 0.0
-            worker.dashboard["buy_limit_price_c"] = 0.0
-            buy_usd = round(float(qty) * entry_avg, 2)
-            sell_usd = round(float(qty) * float(px), 2)
-            worker.dashboard["market_outcome_stamp"] = stamp
-            worker.dashboard["market_outcome_stamp_pnl"] = round(trade_pnl, 4)
-            worker.dashboard["market_outcome_stamp_buy_line"] = (
-                f"Bought ${buy_usd:.2f} {side_label} at {entry_avg * 100:.1f}c"
-            )
-            worker.dashboard["market_outcome_stamp_sell_line"] = (
-                f"Sold ${sell_usd:.2f} {side_label} at {float(px) * 100:.1f}c"
-            )
-            worker.log_pnl(exit_kind, round(trade_pnl, 4), {
-                "market_id": worker.canonical_market_id(),
-                "side": side,
-                "entry_average_fill_price": worker.dashboard.get("entry_fill_price", 0.0),
-                "exit_average_fill_price": px,
-                "shares_sold": qty,
-                "stop_loss_percent": worker.worker_config.stop_loss_pct,
-                "take_profit_percent": worker.worker_config.take_profit_pct,
-                "round_trip_pnl": round(trade_pnl, 4),
-            })
-        else:
-            worker.dashboard["exit_order_status"] = "PARTIAL"
-            worker.dashboard["strategy_state"] = f"{exit_kind.lower()}_exit_pending"
-            worker.position_side = side
-            worker.position_size = remaining
+    def _sync_worker_inventory(self, worker: "MarketWorker", ledger: PairedInventoryLedger) -> None:
+        """Keep PositionInventory aligned with the pairing ledger (restart-safe rebuild)."""
+        inv = worker.inventory
+        inv.reset()
+        for lot in ledger.lots:
+            if lot.shares > _EPS:
+                inv.record_buy(lot.side, lot.shares, lot.execution_price)
+        inv.realized_pnl = ledger.realized_profit + ledger.settlement_realized
 
-    async def _execute_position_exit(
+    def _publish_dashboard(
         self,
         worker: "MarketWorker",
-        cid: str,
+        ledger: PairedInventoryLedger,
+        cfg: PairedStrategyConfig,
+        action: Optional[StrategyAction],
         *,
-        exit_kind: str,
-        limit_price: float,
+        seconds_left: float,
+        phase: MarketPhase,
+    ) -> None:
+        m = ledger.metrics()
+        max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
+        yes_ask = float(worker.best_ask("YES"))
+        no_ask = float(worker.best_ask("NO"))
+        yes_bid = float(worker.best_bid("YES"))
+        no_bid = float(worker.best_bid("NO"))
+        liq = (
+            m.up_unmatched_shares * yes_bid
+            + m.down_unmatched_shares * no_bid
+            + min(m.up_matched_shares, m.down_matched_shares) * 1.0
+        )
+        unreal = 0.0
+        if m.up_total_shares > _EPS:
+            unreal += (yes_bid - m.up_average_cost) * m.up_total_shares
+        if m.down_total_shares > _EPS:
+            unreal += (no_bid - m.down_average_cost) * m.down_total_shares
+
+        worker.dashboard["strategy_mode"] = "paired_inventory_accumulation"
+        worker.dashboard["strategy_name"] = "Paired Inventory Accumulation"
+        worker.dashboard["strategy_label"] = "Paired Inventory ≤ 98¢"
+        worker.dashboard["execution_type"] = "FOK"
+        worker.dashboard["strategy_state"] = (
+            action.kind.value.lower() if action else "idle"
+        )
+        worker.dashboard["market_phase"] = phase.value
+        worker.dashboard["seconds_left"] = int(seconds_left)
+        worker.dashboard["yes_ask"] = round(yes_ask, 4)
+        worker.dashboard["no_ask"] = round(no_ask, 4)
+        worker.dashboard["yes_ask_c"] = round(yes_ask * 100, 2)
+        worker.dashboard["no_ask_c"] = round(no_ask * 100, 2)
+        worker.dashboard["up_inventory"] = round(m.up_total_shares, 4)
+        worker.dashboard["down_inventory"] = round(m.down_total_shares, 4)
+        worker.dashboard["yes_shares"] = round(m.up_total_shares, 4)
+        worker.dashboard["no_shares"] = round(m.down_total_shares, 4)
+        worker.dashboard["matched_shares"] = round(
+            min(m.up_matched_shares, m.down_matched_shares), 4
+        )
+        worker.dashboard["unmatched_up"] = round(m.up_unmatched_shares, 4)
+        worker.dashboard["unmatched_down"] = round(m.down_unmatched_shares, 4)
+        worker.dashboard["up_avg_cost"] = round(m.up_average_cost, 4)
+        worker.dashboard["down_avg_cost"] = round(m.down_average_cost, 4)
+        worker.dashboard["yes_avg_price"] = round(m.up_average_cost, 4)
+        worker.dashboard["no_avg_price"] = round(m.down_average_cost, 4)
+        worker.dashboard["yes_avg_price_c"] = round(m.up_average_cost * 100, 2)
+        worker.dashboard["no_avg_price_c"] = round(m.down_average_cost * 100, 2)
+        worker.dashboard["max_hedge_up"] = round(max_up, 4)
+        worker.dashboard["max_hedge_down"] = round(max_down, 4)
+        worker.dashboard["max_hedge_up_c"] = round(max_up * 100, 2)
+        worker.dashboard["max_hedge_down_c"] = round(max_down * 100, 2)
+        pair_cost = m.matched_pair_cost
+        worker.dashboard["combined_pair_cost"] = round(pair_cost, 4) if pair_cost else 0.0
+        worker.dashboard["combined_pair_cost_c"] = (
+            round(pair_cost * 100, 2) if pair_cost else 0.0
+        )
+        worker.dashboard["pair_avg_price_c"] = worker.dashboard["combined_pair_cost_c"]
+        worker.dashboard["dca_legs_up"] = m.dca_legs_yes
+        worker.dashboard["dca_legs_down"] = m.dca_legs_no
+        worker.dashboard["dca_legs"] = m.dca_legs_yes + m.dca_legs_no
+        worker.dashboard["capital_committed"] = round(m.capital_committed, 4)
+        worker.dashboard["estimated_liquidation_value"] = round(liq, 4)
+        worker.dashboard["realized_pnl"] = round(m.realized_profit, 4)
+        worker.dashboard["unrealized_pnl"] = round(unreal, 4)
+        worker.dashboard["initial_entry_threshold_c"] = round(
+            cfg.initial_entry_threshold * 100, 2
+        )
+        worker.dashboard["target_combined_cost_c"] = round(cfg.target_combined_cost * 100, 2)
+        worker.dashboard["dry_run"] = bool(worker.is_dry_run())
+        worker.dashboard["live_trading_enabled"] = bool(cfg.live_trading_enabled)
+        if action:
+            worker.dashboard["latest_decision"] = action.reason
+            worker.dashboard["entry_block_reason"] = (
+                action.reason if action.kind in (ActionKind.REJECT, ActionKind.WAIT) else ""
+            )
+            worker.dashboard["latest_action"] = action.kind.value
+        worker.dashboard["position_size"] = round(
+            m.up_total_shares + m.down_total_shares, 4
+        )
+        if m.up_unmatched_shares > m.down_unmatched_shares and m.up_unmatched_shares > _EPS:
+            worker.dashboard["position_side"] = "YES"
+        elif m.down_unmatched_shares > _EPS:
+            worker.dashboard["position_side"] = "NO"
+        elif m.up_matched_shares > _EPS:
+            worker.dashboard["position_side"] = "PAIRED"
+        else:
+            worker.dashboard["position_side"] = ""
+
+    def _log_decision(self, worker: "MarketWorker", action: StrategyAction) -> None:
+        key = self._key(worker)
+        sig = f"{action.kind.value}:{action.side}:{action.reason}"
+        if self._last_decision_sig.get(key) == sig:
+            return
+        self._last_decision_sig[key] = sig
+        label = f"{worker.asset_type.upper()} {worker.window_slug}"
+        print(f"📋 [{action.kind.value}] {label} | {action.reason}")
+        _LOG.info(
+            json.dumps(
+                {
+                    "event": "paired_decision",
+                    "worker": key,
+                    "kind": action.kind.value,
+                    "side": action.side,
+                    "qty": action.qty,
+                    "limit": action.limit_price,
+                    "reason": action.reason,
+                    "phase": action.phase.value,
+                    "projected_pair_cost": action.projected_pair_cost,
+                    "ts": time.time(),
+                }
+            )
+        )
+
+    def _trading_allowed(self, worker: "MarketWorker", cfg: PairedStrategyConfig) -> bool:
+        # Live execution requires explicit switch; dry_run always allowed for paper fills.
+        if worker.is_dry_run():
+            return True
+        return bool(cfg.live_trading_enabled)
+
+    async def _execute_buy(
+        self,
+        worker: "MarketWorker",
+        ledger: PairedInventoryLedger,
+        cfg: PairedStrategyConfig,
+        action: StrategyAction,
+        *,
+        is_dca: bool,
     ) -> None:
         from bot import MIN_SHARES, OrderState
 
-        cfg = worker.worker_config
-        side = self._position_side(worker)
+        side = action.side
         if not side:
             return
-        shares = worker.inventory.shares(side)
-        if shares < MIN_SHARES - 1e-9:
+        key = self._key(worker)
+        if self._order_in_flight.get(key):
             return
-
-        wkey = self._key(worker)
-        stopped_out_store.mark_stopped_out(wkey, cid)
-        worker.dashboard["market_stopped_out"] = True
-        triggered_state = "stop_loss_triggered" if exit_kind == "STOP_LOSS" else "take_profit_triggered"
-        worker.dashboard["strategy_state"] = triggered_state
-        log_flag = "stop_loss_trigger_logged" if exit_kind == "STOP_LOSS" else "take_profit_trigger_logged"
-        if not worker.dashboard.get(log_flag):
-            entry = worker.inventory.avg_cost(side)
-            bid = float(worker.best_bid(side))
-            if exit_kind == "STOP_LOSS":
-                trigger = stop_loss_price(entry, cfg.stop_loss_pct)
-                print(
-                    f"🛑 [STOP LOSS TRIGGERED] {worker.asset_type.upper()} {worker.window_slug} | "
-                    f"{side} | entry={entry:.4f} | trigger={trigger:.4f} | "
-                    f"bid={bid:.4f} | market locked against re-entry"
-                )
-            else:
-                trigger = take_profit_price(entry, cfg.take_profit_pct)
-                print(
-                    f"🎯 [TAKE PROFIT TRIGGERED] {worker.asset_type.upper()} {worker.window_slug} | "
-                    f"{side} | entry={entry:.4f} | trigger={trigger:.4f} | "
-                    f"bid={bid:.4f} | market locked against re-entry"
-                )
-            worker.dashboard[log_flag] = True
-
-        if worker._stop_loss_exit_in_flight:
-            return
-        async with worker._stop_loss_lock:
-            if worker._stop_loss_exit_in_flight:
-                return
-            worker._stop_loss_exit_in_flight = True
-            worker.dashboard["exit_order_status"] = "SUBMITTED"
-            worker.dashboard["strategy_state"] = f"{exit_kind.lower()}_exit"
-            purpose = "stop_loss" if exit_kind == "STOP_LOSS" else "take_profit"
-            try:
-                if worker.order_state == OrderState.PENDING or worker._order_lock.locked():
-                    return
-                remaining = worker.inventory.shares(side)
-                if remaining < MIN_SHARES - 1e-9:
-                    return
-                async with worker._order_lock:
-                    worker.order_state = OrderState.PENDING
-                    qty, px, oid = await fok_sell_with_retries(
-                        worker,
-                        side,
-                        remaining,
-                        purpose=purpose,
-                        limit_price=limit_price,
-                        max_retries=cfg.stop_loss_exit_max_retries,
-                        retry_delay_ms=cfg.stop_loss_exit_retry_ms,
-                    )
-                    worker.order_state = OrderState.IDLE
-                    if qty > MIN_SHARES - 1e-9 and px > 0:
-                        await self._record_exit_sell(worker, side, qty, px, oid, exit_kind=exit_kind)
-                    remaining_after = worker.inventory.shares(side)
-                    if remaining_after >= MIN_SHARES - 1e-9:
-                        worker.dashboard["strategy_state"] = f"{exit_kind.lower()}_exit_pending"
-                        worker.dashboard["exit_order_status"] = "RETRY"
-                        worker.dashboard["entry_block_reason"] = f"{purpose}_exit_incomplete"
-                    else:
-                        worker.dashboard["entry_block_reason"] = "stopped_out_market"
-            finally:
-                worker._stop_loss_exit_in_flight = False
-
-    async def _handle_stop_loss(self, worker: "MarketWorker", cid: str) -> None:
-        cfg = worker.worker_config
-        side = self._position_side(worker)
-        if not side:
-            return
-        shares = worker.inventory.shares(side)
-        from bot import MIN_SHARES
-
-        if shares < MIN_SHARES - 1e-9:
-            return
-        entry = worker.inventory.avg_cost(side)
-        bid = float(worker.best_bid(side))
-        if bid <= 0 or not stop_loss_triggered(bid, entry, cfg.stop_loss_pct):
-            return
-        stop_limit = stop_loss_price(entry, cfg.stop_loss_pct)
-        await self._execute_position_exit(worker, cid, exit_kind="STOP_LOSS", limit_price=stop_limit)
-
-    async def _handle_take_profit(self, worker: "MarketWorker", cid: str) -> None:
-        cfg = worker.worker_config
-        side = self._position_side(worker)
-        if not side:
-            return
-        shares = worker.inventory.shares(side)
-        from bot import MIN_SHARES
-
-        if shares < MIN_SHARES - 1e-9:
-            return
-        entry = worker.inventory.avg_cost(side)
-        bid = float(worker.best_bid(side))
-        if bid <= 0 or not take_profit_triggered(bid, entry, cfg.take_profit_pct):
-            return
-        tp_limit = take_profit_price(entry, cfg.take_profit_pct)
-        await self._execute_position_exit(worker, cid, exit_kind="TAKE_PROFIT", limit_price=tp_limit)
-
-    async def _try_entry(self, worker: "MarketWorker", cid: str) -> None:
-        from bot import MIN_SHARES, OrderState, is_trading_allowed
-
-        if shutdown_requested():
-            worker.dashboard["entry_block_reason"] = "shutdown_in_progress"
-            return
-
-        cfg = worker.worker_config
-        wkey = self._key(worker)
-        label = f"{worker.asset_type.upper()} {worker.window_slug}"
-        if stopped_out_store.is_stopped_out(wkey, cid):
-            worker.dashboard["strategy_state"] = "idle"
-            worker.dashboard["entry_block_reason"] = "stopped_out_market"
-            worker.dashboard["market_stopped_out"] = True
-            return
-        if worker.entry_count >= 1 or self._position_side(worker):
-            worker.dashboard["entry_block_reason"] = "position_already_open"
-            return
-        if cid in worker._market_entry_guard:
-            worker.dashboard["entry_block_reason"] = "entry_in_progress"
-            return
-
-        block = self._market_ready(worker)
-        if block:
-            worker.dashboard["entry_block_reason"] = block
-            worker.dashboard["strategy_state"] = "idle"
-            return
-        if not worker.can_enter():
-            worker.dashboard["entry_block_reason"] = "outside_entry_window"
-            return
-        if not is_trading_allowed():
-            worker.dashboard["entry_block_reason"] = "trading_schedule_blocked"
-            return
-
-        size = worker.entry_order_size(["YES", "NO"])
-        if not size or size < cfg.min_order_size:
-            worker.dashboard["entry_block_reason"] = "invalid_order_size"
-            return
-
-        seconds_left = float(worker.market_seconds_left())
-        yes_ask = float(worker.best_ask("YES"))
-        no_ask = float(worker.best_ask("NO"))
-        min_res = resolve_minimum_entry_price(cfg.entry_price)
-        max_res = resolve_max_entry_price(cfg.latency_arb_max_ask)
-        choice = pick_entry_side(
-            yes_ask,
-            no_ask,
-            min_entry_price=min_res.minimum_price,
-            max_entry_price=max_res.max_price,
-        )
-        worker.dashboard["entry_candidate_side"] = choice.side or ""
-        side_for_log = choice.side or "—"
-        ask_log = choice.best_ask if choice.side else max(yes_ask, no_ask)
-        eligible = choice.decision is EntryDecision.BUY and choice.side is not None
-        check_signature = (
-            f"{choice.side or '-'}:{choice.reason}:{ask_log:.4f}:"
-            f"{seconds_left:.0f}:{'eligible' if eligible else 'blocked'}"
-        )
-        if worker.dashboard.get("last_entry_check_signature") != check_signature:
-            print(
-                f"ℹ️ [ENTRY] {label} | floor={min_res.minimum_price:.2f} | "
-                f"{side_for_log} ask={ask_log:.4f} | "
-                f"time_left={seconds_left:.0f}s | eligible={str(eligible).lower()} | "
-                f"reason={choice.reason}"
+        if not self._trading_allowed(worker, cfg):
+            worker.dashboard["entry_block_reason"] = (
+                "LIVE_TRADING_DISABLED: set paired_live_trading_enabled=true and dry_run=false"
             )
-            worker.dashboard["last_entry_check_signature"] = check_signature
-
-        if choice.decision is not EntryDecision.BUY or not choice.side:
-            worker.dashboard["entry_block_reason"] = choice.reason
-            worker.dashboard["strategy_state"] = "idle"
+            print(
+                f"🛑 [LIVE BLOCKED] {worker.asset_type.upper()} {worker.window_slug} | "
+                f"paired live trading disabled — decision was: {action.reason}"
+            )
+            return
+        if ledger.total_shares(side) + action.qty > cfg.max_inventory_per_side + _EPS:
+            worker.dashboard["latest_decision"] = (
+                f"BUY REJECTED: {side} inventory at hard cap {cfg.max_inventory_per_side}"
+            )
             return
 
-        side = choice.side
-
-        worker.dashboard["liquidity_available_shares"] = 0.0
-        exe = worker.executable_buy(side, float(size))
-        if not exe:
-            worker.dashboard["entry_block_reason"] = "no_liquidity"
-            return
-        limit_px, limit_reason = compute_buy_fok_limit_price(
-            exe[0], min_res.minimum_price,
+        exe = worker.executable_buy(side, float(action.qty))
+        depth_err = check_executable_depth(
+            exe, float(action.qty), min_orderbook_depth=cfg.min_orderbook_depth
         )
-        if limit_px is None:
-            worker.dashboard["entry_block_reason"] = limit_reason
-            return
-        if limit_px > max_res.max_price + 1e-9:
-            worker.dashboard["entry_block_reason"] = "ask_above_ceiling"
-            return
-        worker.dashboard["liquidity_available_shares"] = round(float(exe[1]), 4)
-        depth_err = check_executable_depth(exe, float(size), min_orderbook_depth=cfg.min_orderbook_depth)
         if depth_err:
-            worker.dashboard["entry_block_reason"] = depth_err
-            worker.dashboard["strategy_state"] = "idle"
-            if worker.dashboard.get("last_liquidity_log_reason") != depth_err:
-                print(
-                    f"🛑 [LIQUIDITY BLOCK] {label} | {side} | "
-                    f"available={float(exe[1]):.2f} sh | required={float(size):.2f} sh | "
-                    f"minimum_depth={cfg.min_orderbook_depth:.2f} sh"
-                )
-                worker.dashboard["last_liquidity_log_reason"] = depth_err
+            worker.dashboard["latest_decision"] = f"BUY REJECTED: {depth_err}"
             return
-        worker.dashboard["strategy_state"] = "entry_eligible"
-        worker.dashboard["buy_limit_price"] = limit_px
-        worker.dashboard["buy_limit_price_c"] = round(limit_px * 100, 2)
-        worker.dashboard["entry_fill_price"] = 0.0
-        worker.dashboard["entry_fill_price_c"] = 0.0
+        limit_px = float(action.limit_price)
+        if exe and exe[0] > limit_px + _EPS:
+            worker.dashboard["latest_decision"] = (
+                "BUY REJECTED: executable ask moved above approved limit"
+            )
+            return
 
-        worker._market_entry_guard.add(cid)
+        purpose = {
+            ActionKind.BUY_ENTRY: "paired_entry",
+            ActionKind.BUY_DCA: "paired_dca",
+            ActionKind.BUY_HEDGE: "paired_hedge",
+        }.get(action.kind, "paired_buy")
+
+        self._order_in_flight[key] = True
         try:
             async with worker._order_lock:
-                if stopped_out_store.is_stopped_out(wkey, cid):
-                    return
                 if worker.order_state != OrderState.IDLE:
-                    worker.dashboard["entry_block_reason"] = "REJECT_PENDING_ORDER_CONFLICT"
-                    return
-                if self._position_side(worker) or worker.entry_count >= 1:
                     return
                 worker.order_state = OrderState.PENDING
-                worker.dashboard["strategy_state"] = "entry_pending"
-                worker.dashboard["entry_order_status"] = "SUBMITTED"
-                print(
-                    f"📤 [ENTRY] {label} | BUY {side} | ask={choice.best_ask:.4f} | "
-                    f"limit={limit_px:.4f} | size={size:.2f} | "
-                    f"floor={min_res.minimum_price:.2f} | "
-                    f"time_left={seconds_left:.0f}s"
-                )
+                worker.dashboard["strategy_state"] = f"{purpose}_pending"
                 qty, fill_px, oid = await fok_buy_limit(
-                    worker, side, limit_px, float(size), purpose="directional_entry",
+                    worker, side, limit_px, float(action.qty), purpose=purpose,
                 )
                 worker.order_state = OrderState.IDLE
-                if qty <= MIN_SHARES - 1e-9:
-                    worker.dashboard["entry_block_reason"] = "entry_fok_failed"
-                    worker.dashboard["entry_order_status"] = "FAILED"
-                    worker.dashboard["strategy_state"] = "entry_failed"
-                    worker.dashboard["entry_fill_price"] = 0.0
-                    worker.dashboard["entry_fill_price_c"] = 0.0
-                    print(
-                        f"❌ [ENTRY FAILED] {label} | {side} | limit={limit_px:.4f} | "
-                        f"reason=FOK_not_fully_filled"
+                if qty <= MIN_SHARES - 1e-9 or fill_px <= 0:
+                    worker.dashboard["latest_decision"] = (
+                        f"BUY FAILED: FOK not filled for {side} @ {limit_px:.4f}"
                     )
                     return
-                await self._record_buy(worker, side, qty, fill_px, limit_px, oid)
-                worker.dashboard["strategy_state"] = "holding_to_settle"
-                _LOG.info(
-                    json.dumps(
-                        {
-                            "event": "high_confidence_entry_filled",
-                            "market_id": cid,
-                            "side": side,
-                            "limit_price": limit_px,
-                            "avg_fill_price": fill_px,
-                            "qty": qty,
-                            "entry_floor": min_res.minimum_price,
-                            "seconds_left": seconds_left,
-                            "hold_to_settle": True,
-                            "ts": time.time(),
-                        }
-                    )
+                if oid and not worker.record_fill_idempotent(oid, side, qty, fill_px):
+                    return
+                fee = qty * fill_px * cfg.fee_rate
+                ledger.record_buy(
+                    side,
+                    qty,
+                    fill_px,
+                    fees=fee,
+                    order_id=oid,
+                    token_id=str(worker._token_id(side) or ""),
+                    market_id=worker.canonical_market_id() or "",
+                    is_dca=is_dca,
+                )
+                # Enforce profitability on newly formed pairs.
+                ledger.match_fifo(max_combined=cfg.max_combined_cost)
+                self._sync_worker_inventory(worker, ledger)
+                self._persist_ledger(key, ledger)
+                worker.log_trade(side, fill_px, "BUY", size=qty, order_id=oid)
+                worker.entry_count = max(worker.entry_count, 1)
+                print(
+                    f"✅ [PAIRED BUY] {worker.asset_type.upper()} {worker.window_slug} | "
+                    f"{side} {qty:.2f} @ {fill_px:.4f} | {action.kind.value}"
+                )
+                self._update_cycle_phase(worker, ledger, filled_side=side, kind=action.kind)
+        finally:
+            self._order_in_flight[key] = False
+
+    async def _execute_exit(
+        self,
+        worker: "MarketWorker",
+        ledger: PairedInventoryLedger,
+        cfg: PairedStrategyConfig,
+        action: StrategyAction,
+    ) -> None:
+        from bot import MIN_SHARES, OrderState
+
+        side = action.side
+        if not side:
+            return
+        key = self._key(worker)
+        if self._order_in_flight.get(key):
+            return
+        if not self._trading_allowed(worker, cfg):
+            worker.dashboard["entry_block_reason"] = "LIVE_TRADING_DISABLED"
+            return
+
+        self._order_in_flight[key] = True
+        try:
+            async with worker._order_lock:
+                if worker.order_state != OrderState.IDLE:
+                    return
+                worker.order_state = OrderState.PENDING
+                qty, px, oid = await fok_sell_with_retries(
+                    worker,
+                    side,
+                    float(action.qty),
+                    purpose="paired_exit",
+                    limit_price=float(action.limit_price),
+                    max_retries=worker.worker_config.stop_loss_exit_max_retries,
+                    retry_delay_ms=worker.worker_config.stop_loss_exit_retry_ms,
+                )
+                worker.order_state = OrderState.IDLE
+                if qty <= MIN_SHARES - 1e-9 or px <= 0:
+                    worker.dashboard["latest_decision"] = "EXIT FAILED: sell not filled"
+                    return
+                if oid and oid not in ("stop-loss", "dry-run") and not worker.record_fill_idempotent(
+                    oid, side, qty, px,
+                ):
+                    return
+                fee = qty * px * cfg.fee_rate
+                pnl = ledger.record_sell(side, qty, px, fees=fee)
+                self._sync_worker_inventory(worker, ledger)
+                self._persist_ledger(key, ledger)
+                worker.log_trade(side, px, "SELL", size=qty, order_id=oid)
+                worker.log_pnl(
+                    "PAIRED_EXIT",
+                    round(pnl, 4),
+                    {"side": side, "qty": qty, "price": px, "market_id": worker.canonical_market_id()},
+                )
+                print(
+                    f"💸 [PAIRED EXIT] {worker.asset_type.upper()} {worker.window_slug} | "
+                    f"{side} {qty:.2f} @ {px:.4f} | pnl={pnl:.4f}"
                 )
         finally:
-            worker._market_entry_guard.discard(cid)
+            self._order_in_flight[key] = False
+
+    def _update_cycle_phase(
+        self,
+        worker: "MarketWorker",
+        ledger: PairedInventoryLedger,
+        *,
+        filled_side: str,
+        kind: ActionKind,
+    ) -> None:
+        cid = worker.canonical_market_id()
+        if not cid:
+            return
+        rec = inventory_strategy_store.get_or_create_cycle(self._key(worker), cid)
+        m = ledger.metrics()
+        if kind == ActionKind.BUY_ENTRY:
+            inventory_strategy_store.start_cycle(
+                self._key(worker),
+                cid,
+                first_leg_side=filled_side,
+            )
+            return
+        if kind == ActionKind.BUY_HEDGE and m.up_unmatched_shares <= _EPS and m.down_unmatched_shares <= _EPS:
+            rec.phase = AccumulationPhase.PAIR_COMPLETED
+            rec.initial_hedge_complete = True
+            rec.target_achieved = bool(
+                m.matched_pair_cost is not None
+                and m.matched_pair_cost
+                <= float(worker.worker_config.target_combined_pair_cost) + _EPS
+            )
+            inventory_strategy_store.upsert(rec)
+        elif kind == ActionKind.BUY_DCA:
+            rec.phase = AccumulationPhase.WAITING_FOR_OPPOSITE_ENTRY
+            meta = dict(rec.metadata or {})
+            meta["dca_legs"] = m.dca_legs_yes + m.dca_legs_no
+            rec.metadata = meta
+            inventory_strategy_store.upsert(rec)
 
     async def on_market_tick(self, worker: "MarketWorker") -> None:
         if shutdown_requested():
             return
-        self._publish_dashboard(worker)
-        cid = worker.canonical_market_id()
-        if not cid:
+        cfg = _cfg_from_worker(worker)
+        ledger = self._ledger(worker)
+        seconds_left = float(worker.market_seconds_left())
+        phase = resolve_phase(seconds_left, cfg.phase_policy)
+
+        if not worker.active_market or not worker.canonical_market_id():
+            self._publish_dashboard(
+                worker, ledger, cfg, None, seconds_left=seconds_left, phase=phase,
+            )
             return
 
-        hold = bool(getattr(worker.worker_config, "hold_to_settle", True))
-        if hold:
-            if self._position_side(worker) is not None:
-                worker.dashboard["strategy_state"] = "holding_to_settle"
-                worker.dashboard["entry_block_reason"] = "hold_to_settle"
-                self._publish_dashboard(worker)
-                return
-        else:
-            await self._handle_take_profit(worker, cid)
-            await self._handle_stop_loss(worker, cid)
+        quotes = self._quotes(worker)
+        action = decide(ledger, quotes, cfg, seconds_left=seconds_left)
+        self._log_decision(worker, action)
+        self._publish_dashboard(
+            worker, ledger, cfg, action, seconds_left=seconds_left, phase=phase,
+        )
 
-        has_position = self._position_side(worker) is not None
-        if has_position or worker._stop_loss_exit_in_flight:
-            self._publish_dashboard(worker)
+        if action.kind in (ActionKind.WAIT, ActionKind.REJECT):
             return
-
-        wkey = self._key(worker)
-        if stopped_out_store.is_stopped_out(wkey, cid):
-            worker.dashboard["entry_block_reason"] = "stopped_out_market"
-            worker.dashboard["strategy_state"] = "idle"
-            self._publish_dashboard(worker)
-            return
-
         if worker.order_state.name == "PENDING" or worker._order_lock.locked():
             return
 
-        await self._try_entry(worker, cid)
-        self._publish_dashboard(worker)
+        if action.kind in (ActionKind.BUY_ENTRY, ActionKind.BUY_DCA, ActionKind.BUY_HEDGE):
+            await self._execute_buy(
+                worker,
+                ledger,
+                cfg,
+                action,
+                is_dca=(action.kind == ActionKind.BUY_DCA),
+            )
+        elif action.kind == ActionKind.EXIT:
+            await self._execute_exit(worker, ledger, cfg, action)
+
+        self._publish_dashboard(
+            worker,
+            ledger,
+            cfg,
+            action,
+            seconds_left=float(worker.market_seconds_left()),
+            phase=resolve_phase(float(worker.market_seconds_left()), cfg.phase_policy),
+        )
 
     async def evaluate(self, worker: "MarketWorker"):
         return None
@@ -537,8 +525,11 @@ class DirectionalFokStrategy:
         return None
 
 
-MomentumStrategy = DirectionalFokStrategy
-GabagoolStrategy = DirectionalFokStrategy
-SpreadCaptureStrategy = DirectionalFokStrategy
-LateEntryStrategy = DirectionalFokStrategy
-InventoryAccumulationStrategy = DirectionalFokStrategy
+# Active strategy aliases — bot imports MomentumStrategy.
+MomentumStrategy = InventoryAccumulationStrategy
+GabagoolStrategy = InventoryAccumulationStrategy
+SpreadCaptureStrategy = InventoryAccumulationStrategy
+LateEntryStrategy = InventoryAccumulationStrategy
+
+# Re-export directional strategy for callers that still need it.
+from strategies.directional_fok_strategy import DirectionalFokStrategy  # noqa: E402

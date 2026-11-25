@@ -103,6 +103,7 @@ class IntegrationSourceTests(unittest.TestCase):
         from pathlib import Path
         src = Path("strategies/momentum.py").read_text(encoding="utf-8")
         self.assertIn("DirectionalFokStrategy", src)
+        self.assertIn("InventoryAccumulationStrategy", src)
 
     def test_strategy_buy_authorization(self):
         from pathlib import Path
@@ -113,6 +114,10 @@ class IntegrationSourceTests(unittest.TestCase):
         from pathlib import Path
         root = Path(".")
         self.assertFalse((root / "strategies/late_entry_strategy.py").exists())
+
+    def test_paired_strategy_active(self):
+        from strategies.momentum import MomentumStrategy, InventoryAccumulationStrategy
+        self.assertIs(MomentumStrategy, InventoryAccumulationStrategy)
 
 
 if __name__ == "__main__":

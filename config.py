@@ -182,10 +182,27 @@ class WorkerConfig:
     take_profit_pct: float = 0.50
     price_99_entry_window_seconds: int = 90
     inventory_accumulation_enabled: bool = True
-    cheap_side_min_price: float = 0.10
-    cheap_side_max_price: float = 0.20
+    cheap_side_min_price: float = 0.05
+    cheap_side_max_price: float = 0.35
     target_combined_pair_cost: float = 0.98
     max_combined_pair_cost: float = 0.98
+    # Adaptive paired inventory accumulation
+    paired_initial_entry_threshold: float = 0.35
+    paired_max_inventory_per_side: float = 15.0
+    paired_unmatched_inventory_target: float = 5.0
+    paired_dca_increment: float = 5.0
+    paired_max_dca_legs_per_side: int = 3
+    paired_allow_adaptive_dca: bool = True
+    paired_enable_dynamic_hedge_pricing: bool = True
+    paired_enable_adaptive_hedge_timeout: bool = True
+    paired_enable_adaptive_risk: bool = True
+    paired_live_trading_enabled: bool = False
+    paired_early_min_seconds_left: float = 180.0
+    paired_middle_min_seconds_left: float = 60.0
+    paired_stop_new_accumulation_seconds: float = 90.0
+    paired_force_exit_eval_seconds: float = 45.0
+    paired_exit_max_loss_fraction: float = 0.35
+    strategy_mode: str = "paired_inventory_accumulation"
     max_entries_per_side_per_market: int = 1
     no_buys_last_minutes: int = 2
     cheap_entry_price: float = 0.20
@@ -501,6 +518,89 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         _cfg_get(raw, defaults, "inventory_accumulation_enabled", default=True),
         True,
     )
+    paired_initial_entry_threshold = _parse_unit_fraction(
+        "paired_initial_entry_threshold",
+        _cfg_get(
+            raw, defaults, "paired_initial_entry_threshold", "cheap_side_max_price",
+            default=0.35,
+        ),
+        0.35,
+    )
+    paired_max_inventory_per_side = _parse_max_shares(
+        "paired_max_inventory_per_side",
+        _cfg_get(raw, defaults, "paired_max_inventory_per_side", "max_shares", default=15.0),
+        15.0,
+    )
+    paired_unmatched_inventory_target = _parse_nonnegative_float(
+        "paired_unmatched_inventory_target",
+        _cfg_get(raw, defaults, "paired_unmatched_inventory_target", default=5.0),
+        5.0,
+    )
+    paired_dca_increment = _parse_order_size(
+        "paired_dca_increment",
+        _cfg_get(raw, defaults, "paired_dca_increment", "order_size_max", default=5.0),
+        5.0,
+    )
+    paired_max_dca_legs_raw = _cfg_get(raw, defaults, "paired_max_dca_legs_per_side", default=3)
+    try:
+        paired_max_dca_legs_per_side = int(paired_max_dca_legs_raw)
+    except (TypeError, ValueError):
+        _fatal(f"paired_max_dca_legs_per_side={paired_max_dca_legs_raw!r} is not a valid integer")
+    if paired_max_dca_legs_per_side < 0:
+        _fatal(f"{asset}:{window}: paired_max_dca_legs_per_side must be >= 0")
+    paired_allow_adaptive_dca = _parse_bool_value(
+        "paired_allow_adaptive_dca",
+        _cfg_get(raw, defaults, "paired_allow_adaptive_dca", default=True),
+        True,
+    )
+    paired_enable_dynamic_hedge_pricing = _parse_bool_value(
+        "paired_enable_dynamic_hedge_pricing",
+        _cfg_get(raw, defaults, "paired_enable_dynamic_hedge_pricing", default=True),
+        True,
+    )
+    paired_enable_adaptive_hedge_timeout = _parse_bool_value(
+        "paired_enable_adaptive_hedge_timeout",
+        _cfg_get(raw, defaults, "paired_enable_adaptive_hedge_timeout", default=True),
+        True,
+    )
+    paired_enable_adaptive_risk = _parse_bool_value(
+        "paired_enable_adaptive_risk",
+        _cfg_get(raw, defaults, "paired_enable_adaptive_risk", default=True),
+        True,
+    )
+    paired_live_trading_enabled = _parse_bool_value(
+        "paired_live_trading_enabled",
+        _cfg_get(raw, defaults, "paired_live_trading_enabled", default=False),
+        False,
+    )
+    paired_early_min_seconds_left = _parse_nonnegative_float(
+        "paired_early_min_seconds_left",
+        _cfg_get(raw, defaults, "paired_early_min_seconds_left", default=180.0),
+        180.0,
+    )
+    paired_middle_min_seconds_left = _parse_nonnegative_float(
+        "paired_middle_min_seconds_left",
+        _cfg_get(raw, defaults, "paired_middle_min_seconds_left", default=60.0),
+        60.0,
+    )
+    paired_stop_new_accumulation_seconds = _parse_nonnegative_float(
+        "paired_stop_new_accumulation_seconds",
+        _cfg_get(raw, defaults, "paired_stop_new_accumulation_seconds", default=90.0),
+        90.0,
+    )
+    paired_force_exit_eval_seconds = _parse_nonnegative_float(
+        "paired_force_exit_eval_seconds",
+        _cfg_get(raw, defaults, "paired_force_exit_eval_seconds", default=45.0),
+        45.0,
+    )
+    paired_exit_max_loss_fraction = _parse_nonnegative_float(
+        "paired_exit_max_loss_fraction",
+        _cfg_get(raw, defaults, "paired_exit_max_loss_fraction", default=0.35),
+        0.35,
+    )
+    strategy_mode = str(
+        _cfg_get(raw, defaults, "strategy_mode", default="paired_inventory_accumulation")
+    ).strip().lower() or "paired_inventory_accumulation"
     late_entry_enabled = False
     entry_price_threshold = cheap_entry_price
     max_slippage = _parse_nonnegative_float(
@@ -1209,6 +1309,22 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         cheap_side_max_price=cheap_side_max_price,
         target_combined_pair_cost=target_combined_pair_cost,
         max_combined_pair_cost=max_combined_pair_cost,
+        paired_initial_entry_threshold=paired_initial_entry_threshold,
+        paired_max_inventory_per_side=paired_max_inventory_per_side,
+        paired_unmatched_inventory_target=paired_unmatched_inventory_target,
+        paired_dca_increment=paired_dca_increment,
+        paired_max_dca_legs_per_side=paired_max_dca_legs_per_side,
+        paired_allow_adaptive_dca=paired_allow_adaptive_dca,
+        paired_enable_dynamic_hedge_pricing=paired_enable_dynamic_hedge_pricing,
+        paired_enable_adaptive_hedge_timeout=paired_enable_adaptive_hedge_timeout,
+        paired_enable_adaptive_risk=paired_enable_adaptive_risk,
+        paired_live_trading_enabled=paired_live_trading_enabled,
+        paired_early_min_seconds_left=paired_early_min_seconds_left,
+        paired_middle_min_seconds_left=paired_middle_min_seconds_left,
+        paired_stop_new_accumulation_seconds=paired_stop_new_accumulation_seconds,
+        paired_force_exit_eval_seconds=paired_force_exit_eval_seconds,
+        paired_exit_max_loss_fraction=paired_exit_max_loss_fraction,
+        strategy_mode=strategy_mode,
         max_entries_per_side_per_market=max_entries_per_side_per_market,
         no_buys_last_minutes=no_buys_last_minutes,
         cheap_entry_price=cheap_entry_price,
@@ -1442,11 +1558,22 @@ if WORKER_CONFIGS:
             f"📐 Sizing (trading_config.json): order={wc0.order_size_max} fixed | "
             f"max_order={wc0.max_order_size} | max_shares={wc0.max_shares}"
         )
-    print(
-        f"📈 Entry: ask≥{wc0.entry_price:.2f} | "
-        f"window=final {wc0.entry_window_seconds}s "
-        f"(min_left={wc0.min_entry_seconds_left}s) | "
-        f"band {wc0.latency_arb_min_ask:.2f}-{wc0.latency_arb_max_ask:.2f} | "
-        f"stop={wc0.stop_loss_pct:.0%} | TP={wc0.take_profit_pct:.0%} | "
-        f"hold_to_settle={wc0.hold_to_settle} | order={wc0.order_size_max} sh"
-    )
+    if wc0.strategy_mode == "paired_inventory_accumulation":
+        print(
+            f"📈 Paired inventory: entry≤{wc0.paired_initial_entry_threshold:.2f} | "
+            f"target_pair≤{wc0.target_combined_pair_cost:.2f} | "
+            f"max/side={wc0.paired_max_inventory_per_side:.0f} | "
+            f"unmatched_target={wc0.paired_unmatched_inventory_target:.0f} | "
+            f"adaptive_dca={wc0.paired_allow_adaptive_dca} | "
+            f"live={wc0.paired_live_trading_enabled} | "
+            f"dry_run={wc0.dry_run} | order={wc0.order_size_max} sh"
+        )
+    else:
+        print(
+            f"📈 Entry: ask≥{wc0.entry_price:.2f} | "
+            f"window=final {wc0.entry_window_seconds}s "
+            f"(min_left={wc0.min_entry_seconds_left}s) | "
+            f"band {wc0.latency_arb_min_ask:.2f}-{wc0.latency_arb_max_ask:.2f} | "
+            f"stop={wc0.stop_loss_pct:.0%} | TP={wc0.take_profit_pct:.0%} | "
+            f"hold_to_settle={wc0.hold_to_settle} | order={wc0.order_size_max} sh"
+        )

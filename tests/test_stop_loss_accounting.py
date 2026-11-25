@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from strategies.inventory_accumulation_strategy import DirectionalFokStrategy
+from strategies.directional_fok_strategy import DirectionalFokStrategy
 
 
 class _Inventory:

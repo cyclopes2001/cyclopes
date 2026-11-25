@@ -4,3 +4,6 @@ virtual_env/
 .env
 id_rsa_momentum
 id_rsa_momentum.pub
+paired_ledger_*.json
+market_inventory_store.db
+*.db

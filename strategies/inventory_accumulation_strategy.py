@@ -25,14 +25,20 @@ from utils.paired_decision_engine import (
     decide,
     max_hedge_prices,
 )
+from utils.paired_dashboard_payload import build_paired_dashboard
 from utils.paired_inventory_ledger import PairedInventoryLedger
 from utils.profitability_gate import check_executable_depth
+from utils.market_time_phases import allow_new_accumulation as phase_allows_new_accumulation
 
 if TYPE_CHECKING:
     from bot import MarketWorker
 
 _LOG = logging.getLogger("paired_inventory")
 _EPS = 1e-9
+
+
+def _cents(x: float) -> float:
+    return round(float(x) * 100, 2)
 
 
 def _ledger_path(worker_key: str) -> str:
@@ -94,6 +100,8 @@ class InventoryAccumulationStrategy:
         self._ledgers: dict[str, PairedInventoryLedger] = {}
         self._last_decision_sig: dict[str, str] = {}
         self._order_in_flight: dict[str, bool] = {}
+        self._activity_feed: dict[str, list] = {}
+        self._decision_feed: dict[str, list] = {}
 
     def _key(self, worker: "MarketWorker") -> str:
         return worker.worker_config.key
@@ -117,7 +125,9 @@ class InventoryAccumulationStrategy:
         if os.path.isfile(path):
             try:
                 with open(path, "r", encoding="utf-8") as f:
-                    return PairedInventoryLedger.from_dict(json.load(f))
+                    raw = json.load(f)
+                self._restore_feeds(worker_key, raw)
+                return PairedInventoryLedger.from_dict(raw)
             except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 _LOG.warning("failed to load paired ledger %s: %s", path, exc)
         return PairedInventoryLedger()
@@ -125,10 +135,70 @@ class InventoryAccumulationStrategy:
     def _persist_ledger(self, worker_key: str, ledger: PairedInventoryLedger) -> None:
         path = _ledger_path(worker_key)
         try:
+            blob = ledger.to_dict()
+            blob["activity_feed"] = list(self._activity_feed.get(worker_key) or [])[-200:]
+            blob["decision_feed"] = list(self._decision_feed.get(worker_key) or [])[-200:]
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(ledger.to_dict(), f, indent=2)
+                json.dump(blob, f, indent=2)
         except OSError as exc:
             _LOG.warning("failed to persist paired ledger %s: %s", path, exc)
+
+    def _restore_feeds(self, worker_key: str, raw: dict) -> None:
+        if worker_key not in self._activity_feed:
+            self._activity_feed[worker_key] = list(raw.get("activity_feed") or [])
+        if worker_key not in self._decision_feed:
+            self._decision_feed[worker_key] = list(raw.get("decision_feed") or [])
+
+    def _push_decision(self, worker: "MarketWorker", message: str, *, category: str = "decision") -> None:
+        key = self._key(worker)
+        feed = self._decision_feed.setdefault(key, [])
+        entry = {"timestamp": time.time(), "message": message, "category": category}
+        if not feed or feed[0].get("message") != message:
+            feed.insert(0, entry)
+            del feed[200:]
+
+    def _push_activity(
+        self,
+        worker: "MarketWorker",
+        *,
+        event_type: str,
+        explanation: str,
+        category: str = "execution",
+        side: str = "",
+        qty: float = 0.0,
+        price: float = 0.0,
+        cost_usd: float = 0.0,
+        status: str = "FILLED",
+        order_id: Optional[str] = None,
+    ) -> None:
+        key = self._key(worker)
+        feed = self._activity_feed.setdefault(key, [])
+        label = "UP" if side.upper() == "YES" else ("DOWN" if side.upper() == "NO" else "")
+        feed.append(
+            {
+                "timestamp": time.time(),
+                "event_type": event_type,
+                "category": category,
+                "side": side.upper() if side else "",
+                "side_label": label,
+                "qty": round(float(qty), 4),
+                "price": round(float(price), 4),
+                "price_c": round(float(price) * 100, 2) if price > 0 else 0.0,
+                "cost_usd": round(float(cost_usd), 2),
+                "status": status,
+                "explanation": explanation,
+                "order_id": order_id,
+            }
+        )
+        del feed[:-200]
+
+    def _reserved_capital(self, worker: "MarketWorker") -> float:
+        pending = worker.dashboard.get("paired_pending_order") or {}
+        req = float(pending.get("requested_qty") or 0.0)
+        filled = float(pending.get("filled_qty") or 0.0)
+        px = float(pending.get("limit_price") or 0.0)
+        remaining = max(0.0, req - filled)
+        return remaining * px if remaining > 0 and px > 0 else 0.0
 
     def _quotes(self, worker: "MarketWorker") -> MarketQuoteView:
         worker.refresh_order_book("YES")
@@ -165,12 +235,14 @@ class InventoryAccumulationStrategy:
         seconds_left: float,
         phase: MarketPhase,
     ) -> None:
-        m = ledger.metrics()
-        max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
+        from bot import OrderState
+
+        key = self._key(worker)
         yes_ask = float(worker.best_ask("YES"))
         no_ask = float(worker.best_ask("NO"))
         yes_bid = float(worker.best_bid("YES"))
         no_bid = float(worker.best_bid("NO"))
+        m = ledger.metrics()
         liq = (
             m.up_unmatched_shares * yes_bid
             + m.down_unmatched_shares * no_bid
@@ -182,74 +254,94 @@ class InventoryAccumulationStrategy:
         if m.down_total_shares > _EPS:
             unreal += (no_bid - m.down_average_cost) * m.down_total_shares
 
+        pending = worker.dashboard.get("paired_pending_order")
+        order_pending = worker.order_state == OrderState.PENDING
+        market_outcome = str(worker.dashboard.get("outcome") or "PENDING").upper()
+        market_resolved = market_outcome in ("YES", "NO", "UP", "DOWN", "RESOLVED")
+
+        paired = build_paired_dashboard(
+            ledger,
+            target_combined=cfg.target_combined_cost,
+            fee_rate=cfg.fee_rate,
+            slippage_reserve=cfg.slippage_reserve,
+            dca_increment=cfg.dca_increment,
+            max_dca_legs=cfg.max_dca_legs_per_side,
+            max_inventory_per_side=cfg.max_inventory_per_side,
+            yes_ask=yes_ask,
+            no_ask=no_ask,
+            phase=phase,
+            seconds_left=seconds_left,
+            action=action,
+            pending_order=pending,
+            order_pending=order_pending,
+            activity_feed=self._activity_feed.get(key, []),
+            decision_feed=self._decision_feed.get(key, []),
+            market_resolved=market_resolved,
+            reserved_capital_usd=self._reserved_capital(worker),
+            allow_new_accumulation=phase_allows_new_accumulation(seconds_left, cfg.phase_policy),
+        )
+
         worker.dashboard["strategy_mode"] = "paired_inventory_accumulation"
         worker.dashboard["strategy_name"] = "Paired Inventory Accumulation"
         worker.dashboard["strategy_label"] = "Paired Inventory ≤ 98¢"
         worker.dashboard["execution_type"] = "FOK"
-        worker.dashboard["strategy_state"] = (
-            action.kind.value.lower() if action else "idle"
-        )
+        worker.dashboard["paired"] = paired
+        worker.dashboard["strategy_state"] = action.kind.value.lower() if action else "idle"
+        worker.dashboard["strategy_ui_state"] = paired["strategy_ui"]["state"]
+        worker.dashboard["strategy_ui_reason"] = paired["strategy_ui"]["reason"]
         worker.dashboard["market_phase"] = phase.value
         worker.dashboard["seconds_left"] = int(seconds_left)
         worker.dashboard["yes_ask"] = round(yes_ask, 4)
         worker.dashboard["no_ask"] = round(no_ask, 4)
         worker.dashboard["yes_ask_c"] = round(yes_ask * 100, 2)
         worker.dashboard["no_ask_c"] = round(no_ask * 100, 2)
-        worker.dashboard["up_inventory"] = round(m.up_total_shares, 4)
-        worker.dashboard["down_inventory"] = round(m.down_total_shares, 4)
-        worker.dashboard["yes_shares"] = round(m.up_total_shares, 4)
-        worker.dashboard["no_shares"] = round(m.down_total_shares, 4)
-        worker.dashboard["matched_shares"] = round(
-            min(m.up_matched_shares, m.down_matched_shares), 4
+        worker.dashboard["yes_shares"] = paired["positions"]["up"]["shares"]
+        worker.dashboard["no_shares"] = paired["positions"]["down"]["shares"]
+        worker.dashboard["up_inventory"] = paired["positions"]["up"]["shares"]
+        worker.dashboard["down_inventory"] = paired["positions"]["down"]["shares"]
+        worker.dashboard["position_up_line"] = paired["positions"]["up"]["line"]
+        worker.dashboard["position_down_line"] = paired["positions"]["down"]["line"]
+        worker.dashboard["matched_shares"] = paired["pairing"]["matched_shares"]
+        worker.dashboard["unmatched_up"] = paired["pairing"]["unmatched_up"]
+        worker.dashboard["unmatched_down"] = paired["pairing"]["unmatched_down"]
+        worker.dashboard["pairing_percent"] = paired["pairing"]["pairing_percent"]
+        worker.dashboard["yes_avg_price_c"] = paired["positions"]["up"]["avg_entry_c"]
+        worker.dashboard["no_avg_price_c"] = paired["positions"]["down"]["avg_entry_c"]
+        worker.dashboard["combined_pair_cost_c"] = paired["economics"]["combined_pair_cost_c"]
+        worker.dashboard["pair_avg_price_c"] = paired["economics"]["combined_pair_cost_c"]
+        worker.dashboard["target_combined_cost_c"] = paired["economics"]["target_combined_c"]
+        worker.dashboard["economics_status"] = paired["economics"]["economics_status"]
+        worker.dashboard["max_hedge_up_c"] = paired["hedge_monitor"]["max_hedge_up_c"]
+        worker.dashboard["max_hedge_down_c"] = paired["hedge_monitor"]["max_hedge_down_c"]
+        worker.dashboard["capital_committed"] = paired["capital"]["total_capital_usd"]
+        worker.dashboard["dca_legs"] = (
+            paired["dca"]["up_completed_legs"] + paired["dca"]["down_completed_legs"]
         )
-        worker.dashboard["unmatched_up"] = round(m.up_unmatched_shares, 4)
-        worker.dashboard["unmatched_down"] = round(m.down_unmatched_shares, 4)
-        worker.dashboard["up_avg_cost"] = round(m.up_average_cost, 4)
-        worker.dashboard["down_avg_cost"] = round(m.down_average_cost, 4)
-        worker.dashboard["yes_avg_price"] = round(m.up_average_cost, 4)
-        worker.dashboard["no_avg_price"] = round(m.down_average_cost, 4)
-        worker.dashboard["yes_avg_price_c"] = round(m.up_average_cost * 100, 2)
-        worker.dashboard["no_avg_price_c"] = round(m.down_average_cost * 100, 2)
-        worker.dashboard["max_hedge_up"] = round(max_up, 4)
-        worker.dashboard["max_hedge_down"] = round(max_down, 4)
-        worker.dashboard["max_hedge_up_c"] = round(max_up * 100, 2)
-        worker.dashboard["max_hedge_down_c"] = round(max_down * 100, 2)
-        pair_cost = m.matched_pair_cost
-        worker.dashboard["combined_pair_cost"] = round(pair_cost, 4) if pair_cost else 0.0
-        worker.dashboard["combined_pair_cost_c"] = (
-            round(pair_cost * 100, 2) if pair_cost else 0.0
-        )
-        worker.dashboard["pair_avg_price_c"] = worker.dashboard["combined_pair_cost_c"]
-        worker.dashboard["dca_legs_up"] = m.dca_legs_yes
-        worker.dashboard["dca_legs_down"] = m.dca_legs_no
-        worker.dashboard["dca_legs"] = m.dca_legs_yes + m.dca_legs_no
-        worker.dashboard["capital_committed"] = round(m.capital_committed, 4)
         worker.dashboard["estimated_liquidation_value"] = round(liq, 4)
-        worker.dashboard["realized_pnl"] = round(m.realized_profit, 4)
+        worker.dashboard["realized_pnl"] = paired["economics"]["realized_pnl_usd"]
         worker.dashboard["unrealized_pnl"] = round(unreal, 4)
-        worker.dashboard["initial_entry_threshold_c"] = round(
-            cfg.initial_entry_threshold * 100, 2
-        )
-        worker.dashboard["target_combined_cost_c"] = round(cfg.target_combined_cost * 100, 2)
+        worker.dashboard["initial_entry_threshold_c"] = round(cfg.initial_entry_threshold * 100, 2)
         worker.dashboard["dry_run"] = bool(worker.is_dry_run())
         worker.dashboard["live_trading_enabled"] = bool(cfg.live_trading_enabled)
+        worker.dashboard["allow_new_accumulation"] = paired["strategy_ui"]["allow_new_accumulation"]
         if action:
             worker.dashboard["latest_decision"] = action.reason
             worker.dashboard["entry_block_reason"] = (
                 action.reason if action.kind in (ActionKind.REJECT, ActionKind.WAIT) else ""
             )
             worker.dashboard["latest_action"] = action.kind.value
-        worker.dashboard["position_size"] = round(
-            m.up_total_shares + m.down_total_shares, 4
+        worker.dashboard["position_size"] = (
+            paired["positions"]["up"]["shares"] + paired["positions"]["down"]["shares"]
         )
-        if m.up_unmatched_shares > m.down_unmatched_shares and m.up_unmatched_shares > _EPS:
+        if paired["pairing"]["unmatched_up"] > paired["pairing"]["unmatched_down"]:
             worker.dashboard["position_side"] = "YES"
-        elif m.down_unmatched_shares > _EPS:
+        elif paired["pairing"]["unmatched_down"] > _EPS:
             worker.dashboard["position_side"] = "NO"
-        elif m.up_matched_shares > _EPS:
+        elif paired["pairing"]["matched_shares"] > _EPS:
             worker.dashboard["position_side"] = "PAIRED"
         else:
             worker.dashboard["position_side"] = ""
+        worker.dashboard["strategy_display_state"] = paired["strategy_ui"]["state"]
 
     def _log_decision(self, worker: "MarketWorker", action: StrategyAction) -> None:
         key = self._key(worker)
@@ -259,6 +351,10 @@ class InventoryAccumulationStrategy:
         self._last_decision_sig[key] = sig
         label = f"{worker.asset_type.upper()} {worker.window_slug}"
         print(f"📋 [{action.kind.value}] {label} | {action.reason}")
+        cat = "dca" if "DCA" in action.reason.upper() else (
+            "hedge" if "HEDGE" in action.reason.upper() or action.kind == ActionKind.BUY_HEDGE else "decision"
+        )
+        self._push_decision(worker, action.reason, category=cat)
         _LOG.info(
             json.dumps(
                 {
@@ -341,15 +437,52 @@ class InventoryAccumulationStrategy:
                     return
                 worker.order_state = OrderState.PENDING
                 worker.dashboard["strategy_state"] = f"{purpose}_pending"
+                worker.dashboard["paired_pending_order"] = {
+                    "side": side,
+                    "requested_qty": float(action.qty),
+                    "filled_qty": 0.0,
+                    "limit_price": limit_px,
+                    "status": "SUBMITTED",
+                    "purpose": purpose,
+                    "timestamp": time.time(),
+                    "order_id": None,
+                }
+                self._publish_dashboard(
+                    worker, ledger, cfg, action,
+                    seconds_left=float(worker.market_seconds_left()),
+                    phase=resolve_phase(float(worker.market_seconds_left()), cfg.phase_policy),
+                )
                 qty, fill_px, oid = await fok_buy_limit(
                     worker, side, limit_px, float(action.qty), purpose=purpose,
                 )
                 worker.order_state = OrderState.IDLE
-                if qty <= MIN_SHARES - 1e-9 or fill_px <= 0:
+                worker.dashboard.pop("paired_pending_order", None)
+                if qty <= _EPS or fill_px <= 0:
                     worker.dashboard["latest_decision"] = (
                         f"BUY FAILED: FOK not filled for {side} @ {limit_px:.4f}"
                     )
+                    self._push_activity(
+                        worker,
+                        event_type="ORDER_FAILED",
+                        category="execution",
+                        side=side,
+                        qty=0.0,
+                        price=limit_px,
+                        status="REJECTED",
+                        explanation=f"BUY FAILED: FOK not filled for {side} @ {limit_px*100:.1f}¢",
+                    )
                     return
+                if qty + _EPS < float(action.qty) - 1e-6:
+                    worker.dashboard["paired_pending_order"] = {
+                        "side": side,
+                        "requested_qty": float(action.qty),
+                        "filled_qty": float(qty),
+                        "limit_price": fill_px,
+                        "status": "PARTIAL",
+                        "purpose": purpose,
+                        "timestamp": time.time(),
+                        "order_id": oid,
+                    }
                 if oid and not worker.record_fill_idempotent(oid, side, qty, fill_px):
                     return
                 fee = qty * fill_px * cfg.fee_rate
@@ -374,6 +507,36 @@ class InventoryAccumulationStrategy:
                     f"{side} {qty:.2f} @ {fill_px:.4f} | {action.kind.value}"
                 )
                 self._update_cycle_phase(worker, ledger, filled_side=side, kind=action.kind)
+                side_label = "UP" if side == "YES" else "DOWN"
+                cost = qty * fill_px + fee
+                self._push_activity(
+                    worker,
+                    event_type="FILL",
+                    category="hedge" if action.kind == ActionKind.BUY_HEDGE else (
+                        "dca" if action.kind == ActionKind.BUY_DCA else "execution"
+                    ),
+                    side=side,
+                    qty=qty,
+                    price=fill_px,
+                    cost_usd=cost,
+                    status="PARTIAL" if qty + _EPS < float(action.qty) else "FILLED",
+                    order_id=oid,
+                    explanation=(
+                        f"BOUGHT {qty:g} {side_label} @ {fill_px*100:.1f}¢ — ${cost:.2f}"
+                    ),
+                )
+                if action.kind == ActionKind.BUY_HEDGE:
+                    pc = ledger.portfolio_matched_pair_cost()
+                    if pc is not None:
+                        self._push_activity(
+                            worker,
+                            event_type="PAIR_COMPLETED",
+                            category="hedge",
+                            explanation=f"PAIR COMPLETED — combined {_cents(pc):.1f}¢",
+                            price=pc,
+                        )
+                worker.dashboard.pop("paired_pending_order", None)
+                self._persist_ledger(key, ledger)
         finally:
             self._order_in_flight[key] = False
 

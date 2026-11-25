@@ -4027,6 +4027,20 @@ class MarketWorker:
             "entry_allowed": schedule_ok,
             "status": self.dashboard.get("strategy_display_state", trade_phase),
         }
+        if self.dashboard.get("strategy_mode") == "paired_inventory_accumulation":
+            for key, val in self.dashboard.items():
+                if key.startswith("_"):
+                    continue
+                payload[key] = val
+            up_line = self.dashboard.get("position_up_line")
+            dn_line = self.dashboard.get("position_down_line")
+            if up_line or dn_line:
+                payload["position"] = f"{up_line or '0 UP @ $0.00'} · {dn_line or '0 DOWN @ $0.00'}"
+            payload["strategy"] = "paired_inventory_accumulation"
+            payload["strategy_label"] = self.dashboard.get(
+                "strategy_label", "Paired Inventory ≤ 98¢",
+            )
+            payload["strategy_name"] = self.dashboard.get("strategy_name", payload["strategy_label"])
         return enrich_dashboard_payload(payload)
 
     async def on_market_expired(self) -> None:

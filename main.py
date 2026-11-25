@@ -710,6 +710,32 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     .card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
     .card:hover { transform: translateY(-3px); }
     .bot-card-body { position: relative; }
+    .pair-terminal { font-family: 'JetBrains Mono','Consolas',monospace; font-variant-numeric: tabular-nums; }
+    .pair-panel { background: rgba(24,24,27,.85); border: 1px solid rgba(63,63,70,.55); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+    .pair-panel-title { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a1a1aa; margin-bottom: 8px; }
+    .pair-pos-line { font-size: 14px; font-weight: 700; color: #f4f4f5; line-height: 1.35; }
+    .pair-pos-sub { font-size: 11px; color: #a1a1aa; margin-top: 2px; }
+    .pair-up { color: #4ade80; }
+    .pair-down { color: #f87171; }
+    .pair-expiry { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #fafafa; }
+    .pair-state { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid #3f3f46; background: #27272a; color: #e4e4e7; display: inline-block; }
+    .pair-block { display: inline-flex; align-items: center; font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 6px; margin: 2px 3px 2px 0; letter-spacing: .04em; }
+    .pair-block.PAIRED { background: rgba(34,197,94,.18); color: #86efac; border: 1px solid rgba(34,197,94,.35); }
+    .pair-block.UNMATCHED { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .pair-block.MIXED { background: rgba(59,130,246,.14); color: #93c5fd; border: 1px solid rgba(59,130,246,.35); }
+    .pair-block.EMPTY { background: rgba(39,39,42,.8); color: #71717a; border: 1px dashed #3f3f46; }
+    .pair-leg { border-radius: 10px; border: 1px solid #3f3f46; padding: 8px; background: #18181b; font-size: 10px; line-height: 1.45; }
+    .pair-leg.FILLED { border-color: rgba(34,197,94,.55); }
+    .pair-leg.PARTIALLY_FILLED { border-color: rgba(59,130,246,.55); }
+    .pair-leg.PENDING { border-color: rgba(245,158,11,.55); }
+    .pair-leg.AVAILABLE { opacity: .85; }
+    .pair-leg.CANCELLED, .pair-leg.REJECTED { border-color: rgba(113,113,122,.8); opacity: .7; }
+    .pair-econ-green { color: #4ade80; }
+    .pair-econ-amber { color: #fbbf24; }
+    .pair-econ-red { color: #f87171; }
+    .pair-feed { max-height: 140px; overflow-y: auto; font-size: 10px; color: #d4d4d8; }
+    .pair-feed-row { padding: 4px 0; border-bottom: 1px solid rgba(63,63,70,.4); }
+    details.pair-details > summary { cursor: pointer; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #a1a1aa; margin: 8px 0 4px; }
     .receipt-stamp {
       position: absolute;
       top: 42%;
@@ -2283,7 +2309,123 @@ function _renderOutcomeStamp(bot) {
   return `<div class="${cls}" aria-hidden="true"><span class="stamp-head">${stamp}</span>${detailHtml}${pnlLine}</div>`;
 }
 
+function _pairLegClass(st){const u=String(st||'AVAILABLE').toUpperCase();return u.replace(/\s+/g,'_');}
+function _econClass(st){return st==='green'?'pair-econ-green':st==='amber'?'pair-econ-amber':st==='red'?'pair-econ-red':'text-zinc-300';}
+function _fmtTs(ts){if(!ts)return '—';try{return new Date(ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){return '—';}}
+function _renderPairBlocks(blocks,label){
+  const rows=(blocks||[]).map(b=>`<span class="pair-block ${b.kind}">${b.label}</span>`).join('');
+  return `<div class="text-[10px] text-zinc-500 mb-1">${label}</div><div>${rows||'<span class="pair-block EMPTY">—</span>'}</div>`;
+}
+function _renderDcaLegs(legs,sideLabel){
+  return (legs||[]).map(leg=>`<div class="pair-leg ${_pairLegClass(leg.status)}">
+    <div class="flex justify-between"><span class="font-bold">LEG ${leg.leg}</span><span>${leg.fill_ratio}</span></div>
+    <div>${sideLabel} · ${leg.status}</div>
+    <div>Entry: ${leg.avg_fill_c?leg.avg_fill_c.toFixed(1)+'¢':'—'} · Spent: $${_fmtMoney(leg.spent_usd||0)}</div>
+    <div class="text-zinc-500">${leg.order_id?('#'+String(leg.order_id).slice(0,8)):''} ${_fmtTs(leg.timestamp)}</div>
+  </div>`).join('');
+}
+function _renderPairedTerminalCard(bot){
+  const p=bot.paired||{};
+  const pos=p.positions||{};
+  const pair=p.pairing||{};
+  const dca=p.dca||{};
+  const econ=p.economics||{};
+  const hedge=p.hedge_monitor||{};
+  const cap=p.capital||{};
+  const ui=p.strategy_ui||{};
+  const label=`${bot.asset||'BOT'} ${bot.window||'5m'}`.trim();
+  const marketId=(bot.market_id||'').slice(0,14);
+  const yesAskC=Number(bot.yes_ask_c||bot.yes||0);
+  const noAskC=Number(bot.no_ask_c||bot.no||0);
+  const expiryUrgent=(Number(bot.seconds_left)||999)<=90;
+  const unmatchedNote=econ.note_unhedged_not_guaranteed?'<div class="text-[10px] text-amber-400/90 mt-1">Unmatched inventory is not guaranteed profit.</div>':'';
+  const hedgePanels=(hedge.panels||[]).map(h=>`<div class="pair-panel">
+    <div class="pair-panel-title">Hedge · ${h.heavy_side} unmatched ${h.unmatched_shares} sh</div>
+    <div class="text-xs text-zinc-300">Max hedge: ${Number(h.max_hedge_opposite_c||0).toFixed(1)}¢ · Ask: ${Number(h.current_opposite_ask_c||0).toFixed(1)}¢</div>
+    <div class="text-xs ${h.hedge_status==='PROFITABLE OPPORTUNITY'?'pair-econ-green':'text-zinc-400'}">${h.hedge_status}</div>
+    <div class="text-[10px] text-zinc-500">Est. combined ${h.estimated_combined_c!=null?Number(h.estimated_combined_c).toFixed(1)+'¢':'—'} · gap ${h.hedge_gap_c!=null?Number(h.hedge_gap_c).toFixed(1)+'¢':''}</div>
+  </div>`).join('');
+  const history=(p.execution_history||[]).slice().reverse().map(ev=>{
+    const cat=ev.category||'all';
+    return `<div class="pair-feed-row" data-cat="${cat}"><span class="text-zinc-500">${_fmtTs(ev.timestamp)}</span> ${ev.explanation||ev.event_type||''}</div>`;
+  }).join('');
+  const decisions=(p.decision_feed||[]).slice(0,12).map(d=>
+    `<div class="pair-feed-row"><span class="text-zinc-500">${_fmtTs(d.timestamp)}</span> ${d.message||''}</div>`
+  ).join('');
+  return `<div class="rounded-2xl bot-card-body pair-terminal">
+    ${_renderOutcomeStamp(bot)}
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div>
+        <div class="text-xl font-black tracking-tight text-zinc-50">${label} <span class="text-zinc-500 text-sm font-mono">UP/DOWN</span></div>
+        <div class="text-[10px] font-mono text-zinc-500 mt-1">ID ${marketId||'—'}… · ${bot.strategy_label||'Paired'}</div>
+        <div class="mt-2"><span class="pair-state">${ui.state||bot.strategy_ui_state||'SCANNING'}</span></div>
+      </div>
+      <div class="text-right">
+        <div class="pair-expiry ${expiryUrgent?'text-amber-400':''}" data-market-countdown="${bot.market_end_iso||''}">${bot.timer||'--:--'}</div>
+        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">expires · ${ui.phase||bot.market_phase||'—'}</div>
+        <div class="text-[10px] text-zinc-500 mt-1">${ui.allow_new_accumulation?'Accumulation ON':'Accumulation paused'}</div>
+      </div>
+    </div>
+    <div class="flex gap-2 mb-3">
+      <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">UP ask</div><div class="text-lg font-bold pair-up">${yesAskC?yesAskC.toFixed(1)+'¢':'—'}</div></div>
+      <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">DOWN ask</div><div class="text-lg font-bold pair-down">${noAskC?noAskC.toFixed(1)+'¢':'—'}</div></div>
+    </div>
+    <div class="pair-panel mb-3 border-emerald-900/40">
+      <div class="pair-panel-title">Positions (total acquisition cost)</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><div class="pair-pos-line pair-up">${pos.up?.line||'0 UP @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.up?.avg_entry_c||0).toFixed(1)}¢</div></div>
+        <div><div class="pair-pos-line pair-down">${pos.down?.line||'0 DOWN @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.down?.avg_entry_c||0).toFixed(1)}¢</div></div>
+      </div>
+    </div>
+    <div class="pair-panel mb-3">
+      <div class="pair-panel-title">Paired inventory</div>
+      <div class="text-xs text-zinc-300 mb-2">Matched ${Number(pair.matched_shares||0)} · Unmatched ${Number(pair.unmatched_up||0)} UP / ${Number(pair.unmatched_down||0)} DOWN · <span class="font-bold">${Number(pair.pairing_percent||0).toFixed(0)}%</span> paired</div>
+      ${_renderPairBlocks(pair.up_blocks,'UP tranches')}
+      <div class="h-1"></div>
+      ${_renderPairBlocks(pair.down_blocks,'DOWN tranches')}
+    </div>
+    <div class="pair-panel mb-3">
+      <div class="pair-panel-title">DCA legs</div>
+      <div class="text-[10px] text-zinc-500 mb-2">UP ${dca.up_progress_shares||'0/15'} (${dca.up_completed_legs||0} legs) · DOWN ${dca.down_progress_shares||'0/15'} (${dca.down_completed_legs||0} legs)</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>${_renderDcaLegs(dca.up_legs,'UP')}</div>
+        <div>${_renderDcaLegs(dca.down_legs,'DOWN')}</div>
+      </div>
+    </div>
+    <div class="pair-panel mb-3">
+      <div class="pair-panel-title">Combined economics (matched pairs only)</div>
+      <div class="text-xs ${_econClass(econ.economics_status)}">UP avg ${Number(econ.up_avg_c||0).toFixed(1)}¢ + DOWN avg ${Number(econ.down_avg_c||0).toFixed(1)}¢ = <span class="font-bold">${Number(econ.combined_pair_cost_c||0).toFixed(1)}¢</span> / target ${Number(econ.target_combined_c||98).toFixed(0)}¢</div>
+      <div class="text-[11px] text-zinc-400 mt-1">Completed pairs: ${Number(econ.completed_pairs||0)} · Gross/pair ${econ.gross_profit_per_pair_c!=null?Number(econ.gross_profit_per_pair_c).toFixed(1)+'¢':'—'} · Net/pair ${econ.net_profit_per_pair_c!=null?Number(econ.net_profit_per_pair_c).toFixed(1)+'¢':'—'}</div>
+      <div class="text-[11px] text-zinc-500 mt-1">Realized P&L $${_fmtMoney(econ.realized_pnl_usd||0)} · Unrealized (marks) $${_fmtMoney(bot.unrealized_pnl||0)}</div>
+      ${unmatchedNote}
+    </div>
+    ${hedgePanels||'<div class="pair-panel mb-3"><div class="pair-panel-title">Hedge monitor</div><div class="text-xs text-zinc-500">Balanced — no unmatched hedge watch.</div></div>'}
+    <div class="pair-panel mb-3">
+      <div class="pair-panel-title">Strategy</div>
+      <div class="text-xs text-zinc-200">${ui.reason||bot.strategy_ui_reason||bot.latest_decision||'—'}</div>
+    </div>
+    <div class="pair-panel mb-2">
+      <div class="pair-panel-title">Capital</div>
+      <div class="grid grid-cols-2 gap-x-3 text-[11px] text-zinc-300">
+        <span>UP $${_fmtMoney(cap.up_capital_usd||0)}</span><span>DOWN $${_fmtMoney(cap.down_capital_usd||0)}</span>
+        <span>Total $${_fmtMoney(cap.total_capital_usd||0)}</span><span>Paired $${_fmtMoney(cap.paired_capital_usd||0)}</span>
+        <span>Unmatched $${_fmtMoney(cap.unmatched_capital_usd||0)}</span><span>Reserved $${_fmtMoney(cap.reserved_open_orders_usd||0)}</span>
+      </div>
+    </div>
+    <details class="pair-details"><summary>Execution history</summary><div class="pair-feed" data-feed="history">${history||'<div class="text-zinc-600">No fills yet.</div>'}</div></details>
+    <details class="pair-details"><summary>Decision log</summary><div class="pair-feed">${decisions||'<div class="text-zinc-600">—</div>'}</div></details>
+    <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">
+      <span>${bot.dry_run?'PAPER':'LIVE'} · FOK ${Number(bot.order_size||5)} sh</span>
+      <span>Cum. $${_fmtMoney(bot.cumulative_pnl||0)}</span>
+    </div>
+  </div>`;
+}
+
 function _fmtPositionRow(bot) {
+  const p = bot.paired;
+  if (p && p.positions) {
+    return `${p.positions.up?.line||'0 UP @ $0.00'} · ${p.positions.down?.line||'0 DOWN @ $0.00'}`;
+  }
   const ySh = Number(bot.yes_shares) || 0;
   const nSh = Number(bot.no_shares) || 0;
   if (ySh <= 0 && nSh <= 0) {
@@ -2315,6 +2457,11 @@ function _fmtPositionRow(bot) {
 }
 
 function renderCard(bot){
+  const pairedMode=String(bot.strategy_mode||'')==='paired_inventory_accumulation'
+    ||String(bot.strategy_label||'').startsWith('Paired');
+  if(pairedMode && bot.paired){
+    return _renderPairedTerminalCard(bot);
+  }
   const hasInv = _botHasInventory(bot);
   const positionRow = _fmtPositionRow(bot);
   const hasPos = positionRow !== '-' || hasInv;

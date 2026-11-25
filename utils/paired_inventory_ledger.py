@@ -388,6 +388,7 @@ class PairedInventoryLedger:
     @classmethod
     def from_dict(cls, raw: Dict[str, Any]) -> "PairedInventoryLedger":
         ledger = cls(market_id=str(raw.get("market_id") or ""))
+        raw = {k: v for k, v in raw.items() if k not in ("activity_feed", "decision_feed")}
         ledger.lots = [InventoryLot.from_dict(x) for x in raw.get("lots") or []]
         for p in raw.get("pairs") or []:
             ledger.pairs.append(

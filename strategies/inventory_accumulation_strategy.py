@@ -286,6 +286,7 @@ class InventoryAccumulationStrategy:
             allow_new_accumulation=phase_allows_new_accumulation(seconds_left, cfg.phase_policy),
             initial_entry_threshold=cfg.initial_entry_threshold,
             initial_entry_direction=cfg.initial_entry_direction.value,
+            market_unrealized_usd=round(unreal, 4),
         )
 
         from utils.strategy_display import paired_strategy_label
@@ -332,6 +333,12 @@ class InventoryAccumulationStrategy:
         worker.dashboard["estimated_liquidation_value"] = round(liq, 4)
         worker.dashboard["realized_pnl"] = paired["economics"]["realized_pnl_usd"]
         worker.dashboard["unrealized_pnl"] = round(unreal, 4)
+        pnl = paired.get("pnl") or {}
+        worker.dashboard["market_pnl"] = pnl
+        worker.dashboard["total_market_pnl"] = pnl.get("total_usd")
+        if pnl.get("available") and pnl.get("total_usd") is not None:
+            worker.dashboard["pnl_dollars"] = float(pnl["total_usd"])
+        worker.dashboard["pnl_valuation"] = pnl.get("valuation_method", "mark_to_bid")
         worker.dashboard["initial_entry_threshold_c"] = round(cfg.initial_entry_threshold * 100, 2)
         worker.dashboard["initial_entry_direction"] = cfg.initial_entry_direction.value
         worker.dashboard["initial_entry_rule"] = (

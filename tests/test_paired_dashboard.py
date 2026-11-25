@@ -131,6 +131,18 @@ class ScenarioGTests(unittest.TestCase):
         self.assertIn("RISK", dash["strategy_ui"]["state"])
 
 
+class PnlPayloadTests(unittest.TestCase):
+    def test_market_pnl_total_realized_plus_unrealized(self):
+        ledger = PairedInventoryLedger()
+        ledger.record_buy("YES", 5, 0.67)
+        dash = _panel(ledger, yes_ask=0.66, no_ask=0.34, market_unrealized_usd=-0.15)
+        self.assertTrue(dash["pnl"]["available"])
+        self.assertAlmostEqual(dash["pnl"]["realized_usd"], 0.0, places=2)
+        self.assertAlmostEqual(dash["pnl"]["unrealized_usd"], -0.15, places=2)
+        self.assertAlmostEqual(dash["pnl"]["total_usd"], -0.15, places=2)
+        self.assertEqual(dash["pnl"]["valuation_method"], "mark_to_bid")
+
+
 class FormatTests(unittest.TestCase):
     def test_format_position_uses_total_cost(self):
         self.assertEqual(format_position_line(5, 1.70, "YES"), "5 UP @ $1.70")

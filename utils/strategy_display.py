@@ -16,7 +16,6 @@ def paired_strategy_label(
     target_combined: float = 0.98,
     *,
     initial_entry_max_c: float = 35.0,
-    *,
     cheaper_side_first: bool = True,
 ) -> str:
     cents = round(float(target_combined) * 100)

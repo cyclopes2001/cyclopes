@@ -2518,6 +2518,18 @@ function _renderPairedTerminalCard(bot){
     ? `${marketPnl>=0?'+':''}$${_fmtMoney(Math.abs(marketPnl))}`
     : _maskUsd();
   const econStatusCls=_econClass(econ.economics_status);
+  const sr=bot.settlement_risk||{};
+  const matched=Number(sr.matched_pairs??bot.matched_shares??0);
+  const umY=Number(sr.unmatched_yes??bot.unmatched_up??0);
+  const umN=Number(sr.unmatched_no??bot.unmatched_down??0);
+  const worst=Number(sr.worst_case_pnl??0);
+  const best=Number(sr.best_case_pnl??0);
+  const secLeft=Number(sr.seconds_left??bot.seconds_left??0);
+  const umWarn=!!sr.unmatched_warning||(umY>=5-1e-6||umN>=5-1e-6);
+  const riskLine=`<div class="text-[11px] text-zinc-500 mt-1">Matched ${matched} · Unmatched ${umY}↑ ${umN}↓ · ${secLeft}s left</div>
+    <div class="text-[11px] mt-0.5">Settle <span class="${worst>=0?'pair-pnl-pos':'pair-pnl-neg'}">worst ${worst>=0?'+':''}$${_fmtMoney(Math.abs(worst))}</span>
+    · best <span class="${best>=0?'pair-pnl-pos':'pair-pnl-neg'}">${best>=0?'+':''}$${_fmtMoney(Math.abs(best))}</span>
+    ${umWarn?'<span class="text-amber-400 ml-1">· unmatched cap</span>':''}</div>`;
   return `<div class="rounded-2xl bot-card-body pair-terminal">
     ${_renderOutcomeStamp(bot)}
     <div class="flex items-start justify-between gap-3 mb-2">
@@ -2543,6 +2555,7 @@ function _renderPairedTerminalCard(bot){
         <div class="block text-zinc-300">${combinedLine}</div>
         <div class="block text-zinc-400 mt-0.5">${avgEntryLine}</div>
         <div class="block text-zinc-300 mt-1.5">Market P&L <span class="${pnlCls}">${pnlLine}</span></div>
+        ${riskLine}
       </div>
     </div>
     <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">

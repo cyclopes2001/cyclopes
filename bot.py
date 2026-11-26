@@ -4139,16 +4139,23 @@ class MarketWorker:
         elif outcome == "NO" and no_unpaired > 0:
             self.log_trade("NO", 1.0, "redeem", size=no_unpaired)
 
+        dash = getattr(self, "dashboard", {}) or {}
         self.log_pnl("MARKET_SETTLE", actual_profit, {
-            "outcome":          outcome,
-            "yes_shares":       inv.yes_shares,
-            "no_shares":        inv.no_shares,
-            "matched_pairs":    matched,
-            "yes_unpaired":     yes_unpaired,
-            "no_unpaired":      no_unpaired,
-            "total_cost":       total_cost,
+            "outcome": outcome,
+            "yes_shares": inv.yes_shares,
+            "no_shares": inv.no_shares,
+            "matched_pairs": matched,
+            "yes_unpaired": yes_unpaired,
+            "no_unpaired": no_unpaired,
+            "yes_avg_price": round(inv.avg_cost("YES"), 6),
+            "no_avg_price": round(inv.avg_cost("NO"), 6),
+            "total_cost": total_cost,
             "settlement_value": settlement,
-            "entry_count":      self.entry_count,
+            "entry_count": dash.get("paired_initial_entry_fills", self.entry_count),
+            "initial_entry_fills": dash.get("paired_initial_entry_fills", 0),
+            "dca_fills": dash.get("paired_dca_fills", 0),
+            "hedge_fills": dash.get("paired_hedge_fills", 0),
+            "total_fills": dash.get("paired_total_fills", 0),
         })
         self._finish_market_merge()
 

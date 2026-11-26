@@ -21,6 +21,10 @@ class PhasePolicy:
     middle_min_seconds_left: float = 60.0
     late_min_seconds_left: float = 0.0
     stop_new_accumulation_seconds: float = 90.0
+    stop_initial_entry_seconds: float = 120.0
+    stop_unmatched_dca_seconds: float = 90.0
+    hedge_priority_seconds: float = 60.0
+    final_risk_seconds: float = 30.0
     force_exit_eval_seconds: float = 45.0
 
 

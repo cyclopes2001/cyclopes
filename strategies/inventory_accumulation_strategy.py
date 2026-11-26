@@ -58,6 +58,14 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
             getattr(wc, "paired_stop_new_accumulation_seconds", 90.0)
         ),
         force_exit_eval_seconds=float(getattr(wc, "paired_force_exit_eval_seconds", 45.0)),
+        stop_initial_entry_seconds=float(
+            getattr(wc, "paired_stop_initial_entry_seconds", 120.0)
+        ),
+        stop_unmatched_dca_seconds=float(
+            getattr(wc, "paired_stop_unmatched_dca_seconds", 90.0)
+        ),
+        hedge_priority_seconds=float(getattr(wc, "paired_hedge_priority_seconds", 60.0)),
+        final_risk_seconds=float(getattr(wc, "paired_final_risk_seconds", 30.0)),
     )
     dir_raw = str(getattr(wc, "paired_initial_entry_direction", "CHEAPER_SIDE")).upper()
     if dir_raw == "CHEAP_SIDE":
@@ -81,6 +89,13 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
         max_dca_legs_per_side=int(getattr(wc, "paired_max_dca_legs_per_side", 3)),
         unmatched_inventory_target=float(
             getattr(wc, "paired_unmatched_inventory_target", 5.0)
+        ),
+        max_unmatched_shares_per_side=float(
+            getattr(
+                wc,
+                "paired_max_unmatched_shares_per_side",
+                getattr(wc, "paired_unmatched_inventory_target", 5.0),
+            )
         ),
         allow_adaptive_dca=bool(getattr(wc, "paired_allow_adaptive_dca", True)),
         enable_dynamic_hedge_pricing=bool(
@@ -123,6 +138,11 @@ class InventoryAccumulationStrategy:
         if cid and ledger.market_id and ledger.market_id != cid:
             ledger.reset(cid)
             self._persist_ledger(key, ledger)
+            worker.dashboard["paired_initial_entry_fills"] = 0
+            worker.dashboard["paired_dca_fills"] = 0
+            worker.dashboard["paired_hedge_fills"] = 0
+            worker.dashboard["paired_total_fills"] = 0
+            worker.entry_count = 0
         elif cid and not ledger.market_id:
             ledger.market_id = cid
         return ledger
@@ -337,6 +357,29 @@ class InventoryAccumulationStrategy:
         worker.dashboard["unrealized_pnl"] = round(unreal, 4)
         worker.dashboard["initial_entry_threshold_c"] = round(cfg.initial_entry_threshold * 100, 2)
         worker.dashboard["initial_entry_direction"] = cfg.initial_entry_direction.value
+        from utils.settlement_risk import settlement_outcomes
+
+        outlook = settlement_outcomes(
+            yes_shares=m.up_total_shares,
+            no_shares=m.down_total_shares,
+            total_cost=m.capital_committed,
+        )
+        um_y = m.up_unmatched_shares
+        um_n = m.down_unmatched_shares
+        at_cap = um_y >= cfg.max_unmatched_shares_per_side - _EPS or um_n >= cfg.max_unmatched_shares_per_side - _EPS
+        worker.dashboard["settlement_risk"] = {
+            "yes_shares": outlook.yes_shares,
+            "no_shares": outlook.no_shares,
+            "matched_pairs": outlook.matched_pairs,
+            "unmatched_yes": um_y,
+            "unmatched_no": um_n,
+            "pnl_if_yes_wins": outlook.pnl_if_yes_wins,
+            "pnl_if_no_wins": outlook.pnl_if_no_wins,
+            "worst_case_pnl": outlook.worst_case_pnl,
+            "best_case_pnl": outlook.best_case_pnl,
+            "seconds_left": int(seconds_left),
+            "unmatched_warning": at_cap,
+        }
         worker.dashboard["initial_entry_rule"] = (
             f"EXPENSIVE SIDE FIRST ≥ {cfg.initial_entry_threshold * 100:.0f}¢"
             if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
@@ -431,6 +474,53 @@ class InventoryAccumulationStrategy:
             )
             return
 
+        from utils.settlement_risk import (
+            exceeds_unmatched_cap,
+            projected_totals,
+            projected_unmatched_with_pending,
+            settlement_outcomes,
+        )
+
+        pending = worker.dashboard.get("paired_pending_order") or {}
+        pend_side = pending.get("side")
+        pend_rem = max(
+            0.0,
+            float(pending.get("requested_qty") or 0) - float(pending.get("filled_qty") or 0),
+        )
+        um_y, um_n = projected_unmatched_with_pending(
+            ledger, side, float(action.qty),
+            pending_side=str(pend_side) if pend_side else None,
+            pending_remaining_qty=pend_rem,
+        )
+        is_hedge = action.kind == ActionKind.BUY_HEDGE
+        if not is_hedge and exceeds_unmatched_cap(
+            um_y, um_n,
+            max_unmatched_per_side=cfg.max_unmatched_shares_per_side,
+            buy_side=side,
+        ):
+            worker.dashboard["latest_decision"] = (
+                f"BUY REJECTED: would exceed unmatched cap "
+                f"({cfg.max_unmatched_shares_per_side:g} sh/side) — "
+                f"projected UP {um_y:.1f} / DOWN {um_n:.1f}"
+            )
+            return
+        m = ledger.metrics()
+        py, pn = projected_totals(ledger, side, float(action.qty))
+        add_cost = float(action.qty) * float(action.limit_price) * (1.0 + cfg.fee_rate)
+        outlook = settlement_outcomes(
+            yes_shares=py,
+            no_shares=pn,
+            total_cost=m.capital_committed + add_cost,
+        )
+        worker.dashboard["settlement_risk"] = {
+            "unmatched_yes": um_y,
+            "unmatched_no": um_n,
+            "pnl_if_yes_wins": outlook.pnl_if_yes_wins,
+            "pnl_if_no_wins": outlook.pnl_if_no_wins,
+            "worst_case_pnl": outlook.worst_case_pnl,
+            "best_case_pnl": outlook.best_case_pnl,
+        }
+
         exe = worker.executable_buy(side, float(action.qty))
         depth_err = check_executable_depth(
             exe, float(action.qty), min_orderbook_depth=cfg.min_orderbook_depth
@@ -522,7 +612,26 @@ class InventoryAccumulationStrategy:
                 self._sync_worker_inventory(worker, ledger)
                 self._persist_ledger(key, ledger)
                 worker.log_trade(side, fill_px, "BUY", size=qty, order_id=oid)
-                worker.entry_count = max(worker.entry_count, 1)
+                if action.kind == ActionKind.BUY_ENTRY:
+                    worker.dashboard["paired_initial_entry_fills"] = (
+                        int(worker.dashboard.get("paired_initial_entry_fills") or 0) + 1
+                    )
+                    worker.entry_count = int(worker.dashboard["paired_initial_entry_fills"])
+                elif action.kind == ActionKind.BUY_DCA:
+                    worker.dashboard["paired_dca_fills"] = (
+                        int(worker.dashboard.get("paired_dca_fills") or 0) + 1
+                    )
+                elif action.kind == ActionKind.BUY_HEDGE:
+                    worker.dashboard["paired_hedge_fills"] = (
+                        int(worker.dashboard.get("paired_hedge_fills") or 0) + 1
+                    )
+                worker.dashboard["paired_total_fills"] = (
+                    int(worker.dashboard.get("paired_initial_entry_fills") or 0)
+                    + int(worker.dashboard.get("paired_dca_fills") or 0)
+                    + int(worker.dashboard.get("paired_hedge_fills") or 0)
+                )
+                if worker.entry_count < 1:
+                    worker.entry_count = 1
                 print(
                     f"✅ [PAIRED BUY] {worker.asset_type.upper()} {worker.window_slug} | "
                     f"{side} {qty:.2f} @ {fill_px:.4f} | {action.kind.value}"

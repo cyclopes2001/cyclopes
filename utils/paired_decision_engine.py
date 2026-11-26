@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 from utils.adaptive_dca import DcaDecision, DcaEvaluation, evaluate_adaptive_dca
 from utils.market_time_phases import MarketPhase, PhasePolicy, allow_new_accumulation, resolve_phase
 from utils.paired_inventory_ledger import PairedInventoryLedger
+from utils.settlement_risk import exceeds_unmatched_cap, projected_unmatched
 
 
 _EPS = 1e-9
@@ -64,6 +65,7 @@ class PairedStrategyConfig:
     dca_increment: float = 5.0
     max_dca_legs_per_side: int = 3
     unmatched_inventory_target: float = 5.0
+    max_unmatched_shares_per_side: float = 5.0
     allow_adaptive_dca: bool = True
     enable_dynamic_hedge_pricing: bool = True
     enable_adaptive_hedge_timeout: bool = True
@@ -233,6 +235,18 @@ def evaluate_initial_entry(
     phase: MarketPhase,
     seconds_left: float,
 ) -> Optional[StrategyAction]:
+    if float(seconds_left) <= float(cfg.phase_policy.stop_initial_entry_seconds) + _EPS:
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason=(
+                f"BUY REJECTED: initial entry stopped — "
+                f"{seconds_left:.0f}s left (min {cfg.phase_policy.stop_initial_entry_seconds:.0f}s)"
+            ),
+            phase=phase,
+        )
     if not allow_new_accumulation(seconds_left, cfg.phase_policy):
         return StrategyAction(
             kind=ActionKind.REJECT,
@@ -257,6 +271,13 @@ def evaluate_initial_entry(
         if qty + _EPS < cfg.min_order_size:
             continue
         if depth + _EPS < cfg.min_orderbook_depth:
+            continue
+        um_y, um_n = projected_unmatched(ledger, side, qty)
+        if exceeds_unmatched_cap(
+            um_y, um_n,
+            max_unmatched_per_side=cfg.max_unmatched_shares_per_side,
+            buy_side=side,
+        ):
             continue
         candidates.append((side, ask, qty, depth))
 
@@ -371,6 +392,18 @@ def evaluate_dca_action(
             reason="BUY REJECTED: LATE phase — speculative DCA disabled",
             phase=phase,
         )
+    if float(seconds_left) <= float(cfg.phase_policy.stop_unmatched_dca_seconds) + _EPS:
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason=(
+                f"BUY REJECTED: unmatched DCA stopped — "
+                f"{seconds_left:.0f}s left (min {cfg.phase_policy.stop_unmatched_dca_seconds:.0f}s)"
+            ),
+            phase=phase,
+        )
     if not allow_new_accumulation(seconds_left, cfg.phase_policy):
         return None
 
@@ -402,12 +435,51 @@ def evaluate_dca_action(
     # Only consider DCA when at/above soft unmatched target and price is falling.
     if existing + _EPS < cfg.unmatched_inventory_target:
         return None
+    if existing + _EPS >= cfg.max_unmatched_shares_per_side:
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=side,
+            qty=0.0,
+            limit_price=ask,
+            reason=(
+                f"BUY REJECTED: hard unmatched cap {cfg.max_unmatched_shares_per_side:g} sh on "
+                f"{_side_label(side)} — hedge required, no DCA"
+            ),
+            phase=phase,
+        )
     if ask <= 0:
         return None
 
     qty = min(cfg.dca_increment, depth, cfg.max_inventory_per_side - ledger.total_shares(side))
+    headroom_um = max(0.0, cfg.max_unmatched_shares_per_side - existing)
+    qty = min(qty, headroom_um)
     if qty + _EPS < cfg.min_order_size:
-        return None
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=side,
+            qty=0.0,
+            limit_price=ask,
+            reason=(
+                f"BUY REJECTED: DCA would exceed unmatched limit "
+                f"({existing:.1f} + order > {cfg.max_unmatched_shares_per_side:g} sh)"
+            ),
+            phase=phase,
+        )
+
+    um_y, um_n = projected_unmatched(ledger, side, qty)
+    if exceeds_unmatched_cap(
+        um_y, um_n,
+        max_unmatched_per_side=cfg.max_unmatched_shares_per_side,
+        buy_side=side,
+    ):
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=side,
+            qty=0.0,
+            limit_price=ask,
+            reason="BUY REJECTED: projected unmatched inventory exceeds hard cap",
+            phase=phase,
+        )
 
     ev: DcaEvaluation = evaluate_adaptive_dca(
         side=side,
@@ -506,7 +578,10 @@ def evaluate_exit(
             max_hedge_down=max_down,
         )
 
-    force = seconds_left <= cfg.phase_policy.force_exit_eval_seconds
+    force = seconds_left <= min(
+        cfg.phase_policy.force_exit_eval_seconds,
+        cfg.phase_policy.final_risk_seconds,
+    )
     severe = loss_frac >= cfg.exit_max_loss_fraction and hedge_gap > 0.05
     if force or severe:
         exit_qty = min(qty, depth, cfg.dca_increment) if not force else min(qty, depth)
@@ -575,8 +650,9 @@ def decide(
     if hedge and hedge.kind == ActionKind.BUY_HEDGE:
         return hedge
 
-    # 2) Late: exit evaluation before new risk.
-    if phase == MarketPhase.LATE or seconds_left <= cfg.phase_policy.force_exit_eval_seconds:
+    # 2) Late / final risk: exit evaluation before new risk.
+    risk_cutoff = min(cfg.phase_policy.force_exit_eval_seconds, cfg.phase_policy.final_risk_seconds)
+    if phase == MarketPhase.LATE or seconds_left <= risk_cutoff:
         exit_act = evaluate_exit(ledger, quotes, cfg, phase=phase, seconds_left=seconds_left)
         if exit_act and exit_act.kind == ActionKind.EXIT:
             return exit_act

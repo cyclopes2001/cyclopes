@@ -30,6 +30,8 @@ from utils.paired_dashboard_payload import build_paired_dashboard
 from utils.paired_inventory_ledger import PairedInventoryLedger
 from utils.profitability_gate import check_executable_depth
 from utils.market_time_phases import allow_new_accumulation as phase_allows_new_accumulation
+from utils.velocity_engine import OrderBookVelocityEngine, load_velocity_config
+from utils.velocity_engine.entry_selection import classify_proposed_order
 
 if TYPE_CHECKING:
     from bot import MarketWorker
@@ -124,6 +126,7 @@ class InventoryAccumulationStrategy:
         self._order_in_flight: dict[str, bool] = {}
         self._activity_feed: dict[str, list] = {}
         self._decision_feed: dict[str, list] = {}
+        self._velocity_engines: dict[str, OrderBookVelocityEngine] = {}
 
     def _key(self, worker: "MarketWorker") -> str:
         return worker.worker_config.key
@@ -138,6 +141,9 @@ class InventoryAccumulationStrategy:
         if cid and ledger.market_id and ledger.market_id != cid:
             ledger.reset(cid)
             self._persist_ledger(key, ledger)
+            vel = self._velocity_engines.get(key)
+            if vel is not None:
+                vel.reset(cid)
             worker.dashboard["paired_initial_entry_fills"] = 0
             worker.dashboard["paired_dca_fills"] = 0
             worker.dashboard["paired_hedge_fills"] = 0
@@ -226,6 +232,73 @@ class InventoryAccumulationStrategy:
         px = float(pending.get("limit_price") or 0.0)
         remaining = max(0.0, req - filled)
         return remaining * px if remaining > 0 and px > 0 else 0.0
+
+    def _velocity_engine(self, worker: "MarketWorker") -> OrderBookVelocityEngine:
+        key = self._key(worker)
+        eng = self._velocity_engines.get(key)
+        if eng is None:
+            eng = OrderBookVelocityEngine(load_velocity_config(worker.worker_config))
+            self._velocity_engines[key] = eng
+        return eng
+
+    def _update_velocity(self, worker: "MarketWorker"):
+        vcfg = load_velocity_config(worker.worker_config)
+        if not vcfg.engine_enabled:
+            worker.dashboard["order_book_velocity"] = {"enabled": False}
+            return None
+        eng = self._velocity_engine(worker)
+        eng.cfg = vcfg
+        cid = worker.canonical_market_id() or ""
+        worker.refresh_order_book("YES", max_age_seconds=0.35)
+        worker.refresh_order_book("NO", max_age_seconds=0.35)
+        age_s = worker.max_quote_age_seconds()
+        age_ms = (age_s * 1000.0) if age_s is not None else None
+        snap = eng.update_from_worker(
+            market_id=cid,
+            yes_book=worker.cached_order_book("YES"),
+            no_book=worker.cached_order_book("NO"),
+            quote_age_ms=age_ms,
+        )
+        worker.dashboard["order_book_velocity"] = snap.decision.to_dashboard_dict()
+        _LOG.info(
+            json.dumps(
+                {
+                    "event": "velocity_signal",
+                    "worker": self._key(worker),
+                    **snap.decision.to_audit_dict(),
+                }
+            )
+        )
+        return snap
+
+    def _paper_block_velocity_live(
+        self,
+        worker: "MarketWorker",
+        action: StrategyAction,
+        *,
+        apply_velocity: bool,
+    ) -> StrategyAction:
+        vcfg = load_velocity_config(worker.worker_config)
+        if not (vcfg.paper_mode and vcfg.entry_enabled and apply_velocity):
+            return action
+        if worker.is_dry_run():
+            return action
+        if action.kind not in (ActionKind.BUY_ENTRY, ActionKind.BUY_DCA):
+            return action
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=action.side,
+            qty=0.0,
+            limit_price=action.limit_price,
+            reason=(
+                f"PAPER: velocity-driven {action.kind.value} blocked for live account — "
+                f"{action.reason}"
+            ),
+            phase=action.phase,
+            max_hedge_up=action.max_hedge_up,
+            max_hedge_down=action.max_hedge_down,
+            projected_pair_cost=action.projected_pair_cost,
+        )
 
     def _quotes(self, worker: "MarketWorker") -> MarketQuoteView:
         worker.refresh_order_book("YES")
@@ -406,6 +479,20 @@ class InventoryAccumulationStrategy:
         else:
             worker.dashboard["position_side"] = ""
         worker.dashboard["strategy_display_state"] = paired["strategy_ui"]["state"]
+        vel = worker.dashboard.get("order_book_velocity")
+        if vel and action:
+            m = ledger.metrics()
+            unmatched = m.up_unmatched_shares > _EPS or m.down_unmatched_shares > _EPS
+            completes_hedge = action.kind == ActionKind.BUY_HEDGE and unmatched
+            cls = classify_proposed_order(
+                action_kind=action.kind.value,
+                side=action.side,
+                ledger_has_unmatched=unmatched,
+                completes_hedge=bool(completes_hedge and action.projected_pair_cost),
+            )
+            vel = dict(vel)
+            vel["entry_classification"] = cls.value
+            worker.dashboard["order_book_velocity"] = vel
 
     def _log_decision(self, worker: "MarketWorker", action: StrategyAction) -> None:
         key = self._key(worker)
@@ -780,7 +867,21 @@ class InventoryAccumulationStrategy:
             return
 
         quotes = self._quotes(worker)
-        action = decide(ledger, quotes, cfg, seconds_left=seconds_left)
+        vel_snap = self._update_velocity(worker)
+        vcfg = load_velocity_config(worker.worker_config)
+        vel_ctx = vel_snap.context if vel_snap else None
+        apply_velocity = bool(
+            vel_snap and vcfg.engine_enabled and vcfg.entry_enabled
+        )
+        action = decide(
+            ledger,
+            quotes,
+            cfg,
+            seconds_left=seconds_left,
+            velocity=vel_ctx,
+            apply_velocity_entry=apply_velocity,
+        )
+        action = self._paper_block_velocity_live(worker, action, apply_velocity=apply_velocity)
         self._log_decision(worker, action)
         self._publish_dashboard(
             worker, ledger, cfg, action, seconds_left=seconds_left, phase=phase,

@@ -2659,6 +2659,12 @@ class MarketWorker:
         except Exception as exc:
             exec_log("order_book_fetch_failed", side=side, error=str(exc))
 
+    def cached_order_book(self, side: str) -> Optional[Any]:
+        """Return the latest cached CLOB book snapshot for a side (may refresh first)."""
+        self.refresh_order_book(side)
+        cached = self._book_cache.get(side)
+        return cached[1] if cached else None
+
     @staticmethod
     def _book_best_prices(book: Any) -> Tuple[float, float]:
         """Return (best_ask, best_bid) from a CLOB order book snapshot."""

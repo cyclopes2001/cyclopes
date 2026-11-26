@@ -198,6 +198,29 @@ class WorkerConfig:
     paired_enable_adaptive_hedge_timeout: bool = True
     paired_enable_adaptive_risk: bool = True
     paired_live_trading_enabled: bool = False
+    # Order-book velocity engine (Polymarket-only; paper-tested defaults)
+    velocity_engine_enabled: bool = True
+    velocity_entry_enabled: bool = True
+    velocity_initial_entry_override_enabled: bool = False
+    velocity_paper_mode: bool = True
+    velocity_windows_seconds: tuple = (1.0, 3.0, 5.0, 10.0)
+    velocity_min_confidence: float = 75.0
+    velocity_signal_persistence_ms: float = 1000.0
+    velocity_max_book_age_ms: float = 1000.0
+    velocity_min_observations: int = 3
+    velocity_min_depth: float = 5.0
+    velocity_max_spread: float = 0.08
+    velocity_min_price_movement_ticks: int = 1
+    velocity_tick_size: float = 0.01
+    velocity_reversal_confirmation_enabled: bool = True
+    velocity_require_ofi_confirmation: bool = True
+    velocity_require_obi_confirmation: bool = True
+    velocity_require_depth_validation: bool = True
+    velocity_fast_threshold: float = 0.002
+    velocity_slow_threshold: float = 0.0008
+    velocity_acceleration_threshold: float = 0.0005
+    velocity_ofi_norm_cap: float = 50.0
+    velocity_rising_fast_block_chase: bool = True
     paired_early_min_seconds_left: float = 180.0
     paired_middle_min_seconds_left: float = 60.0
     paired_stop_new_accumulation_seconds: float = 90.0
@@ -592,6 +615,114 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         "paired_live_trading_enabled",
         _cfg_get(raw, defaults, "paired_live_trading_enabled", default=False),
         False,
+    )
+    velocity_engine_enabled = _parse_bool_value(
+        "velocity_engine_enabled",
+        _cfg_get(raw, defaults, "velocity_engine_enabled", default=True),
+        True,
+    )
+    velocity_entry_enabled = _parse_bool_value(
+        "velocity_entry_enabled",
+        _cfg_get(raw, defaults, "velocity_entry_enabled", default=True),
+        True,
+    )
+    velocity_initial_entry_override_enabled = _parse_bool_value(
+        "velocity_initial_entry_override_enabled",
+        _cfg_get(raw, defaults, "velocity_initial_entry_override_enabled", default=False),
+        False,
+    )
+    velocity_paper_mode = _parse_bool_value(
+        "velocity_paper_mode",
+        _cfg_get(raw, defaults, "velocity_paper_mode", default=True),
+        True,
+    )
+    _vel_windows = _cfg_get(
+        raw, defaults, "velocity_windows_seconds", default=(1.0, 3.0, 5.0, 10.0),
+    )
+    if isinstance(_vel_windows, (list, tuple)):
+        velocity_windows_seconds = tuple(float(x) for x in _vel_windows)
+    else:
+        velocity_windows_seconds = (1.0, 3.0, 5.0, 10.0)
+    velocity_min_confidence = _parse_nonnegative_float(
+        "velocity_min_confidence",
+        _cfg_get(raw, defaults, "velocity_min_confidence", default=75.0),
+        75.0,
+    )
+    velocity_signal_persistence_ms = _parse_nonnegative_float(
+        "velocity_signal_persistence_ms",
+        _cfg_get(raw, defaults, "velocity_signal_persistence_ms", default=1000.0),
+        1000.0,
+    )
+    velocity_max_book_age_ms = _parse_nonnegative_float(
+        "velocity_max_book_age_ms",
+        _cfg_get(raw, defaults, "velocity_max_book_age_ms", default=1000.0),
+        1000.0,
+    )
+    velocity_min_observations = int(
+        _cfg_get(raw, defaults, "velocity_min_observations", default=3) or 3
+    )
+    velocity_min_depth = _parse_nonnegative_float(
+        "velocity_min_depth",
+        _cfg_get(raw, defaults, "velocity_min_depth", default=5.0),
+        5.0,
+    )
+    velocity_max_spread = _parse_nonnegative_float(
+        "velocity_max_spread",
+        _cfg_get(raw, defaults, "velocity_max_spread", default=0.08),
+        0.08,
+    )
+    velocity_min_price_movement_ticks = int(
+        _cfg_get(raw, defaults, "velocity_min_price_movement_ticks", default=1) or 1
+    )
+    velocity_tick_size = _parse_nonnegative_float(
+        "velocity_tick_size",
+        _cfg_get(raw, defaults, "velocity_tick_size", default=0.01),
+        0.01,
+    )
+    velocity_reversal_confirmation_enabled = _parse_bool_value(
+        "velocity_reversal_confirmation_enabled",
+        _cfg_get(raw, defaults, "velocity_reversal_confirmation_enabled", default=True),
+        True,
+    )
+    velocity_require_ofi_confirmation = _parse_bool_value(
+        "velocity_require_ofi_confirmation",
+        _cfg_get(raw, defaults, "velocity_require_ofi_confirmation", default=True),
+        True,
+    )
+    velocity_require_obi_confirmation = _parse_bool_value(
+        "velocity_require_obi_confirmation",
+        _cfg_get(raw, defaults, "velocity_require_obi_confirmation", default=True),
+        True,
+    )
+    velocity_require_depth_validation = _parse_bool_value(
+        "velocity_require_depth_validation",
+        _cfg_get(raw, defaults, "velocity_require_depth_validation", default=True),
+        True,
+    )
+    velocity_fast_threshold = _parse_nonnegative_float(
+        "velocity_fast_threshold",
+        _cfg_get(raw, defaults, "velocity_fast_threshold", default=0.002),
+        0.002,
+    )
+    velocity_slow_threshold = _parse_nonnegative_float(
+        "velocity_slow_threshold",
+        _cfg_get(raw, defaults, "velocity_slow_threshold", default=0.0008),
+        0.0008,
+    )
+    velocity_acceleration_threshold = _parse_nonnegative_float(
+        "velocity_acceleration_threshold",
+        _cfg_get(raw, defaults, "velocity_acceleration_threshold", default=0.0005),
+        0.0005,
+    )
+    velocity_ofi_norm_cap = _parse_nonnegative_float(
+        "velocity_ofi_norm_cap",
+        _cfg_get(raw, defaults, "velocity_ofi_norm_cap", default=50.0),
+        50.0,
+    )
+    velocity_rising_fast_block_chase = _parse_bool_value(
+        "velocity_rising_fast_block_chase",
+        _cfg_get(raw, defaults, "velocity_rising_fast_block_chase", default=True),
+        True,
     )
     paired_early_min_seconds_left = _parse_nonnegative_float(
         "paired_early_min_seconds_left",
@@ -1340,6 +1471,28 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         paired_enable_adaptive_hedge_timeout=paired_enable_adaptive_hedge_timeout,
         paired_enable_adaptive_risk=paired_enable_adaptive_risk,
         paired_live_trading_enabled=paired_live_trading_enabled,
+        velocity_engine_enabled=velocity_engine_enabled,
+        velocity_entry_enabled=velocity_entry_enabled,
+        velocity_initial_entry_override_enabled=velocity_initial_entry_override_enabled,
+        velocity_paper_mode=velocity_paper_mode,
+        velocity_windows_seconds=velocity_windows_seconds,
+        velocity_min_confidence=velocity_min_confidence,
+        velocity_signal_persistence_ms=velocity_signal_persistence_ms,
+        velocity_max_book_age_ms=velocity_max_book_age_ms,
+        velocity_min_observations=velocity_min_observations,
+        velocity_min_depth=velocity_min_depth,
+        velocity_max_spread=velocity_max_spread,
+        velocity_min_price_movement_ticks=velocity_min_price_movement_ticks,
+        velocity_tick_size=velocity_tick_size,
+        velocity_reversal_confirmation_enabled=velocity_reversal_confirmation_enabled,
+        velocity_require_ofi_confirmation=velocity_require_ofi_confirmation,
+        velocity_require_obi_confirmation=velocity_require_obi_confirmation,
+        velocity_require_depth_validation=velocity_require_depth_validation,
+        velocity_fast_threshold=velocity_fast_threshold,
+        velocity_slow_threshold=velocity_slow_threshold,
+        velocity_acceleration_threshold=velocity_acceleration_threshold,
+        velocity_ofi_norm_cap=velocity_ofi_norm_cap,
+        velocity_rising_fast_block_chase=velocity_rising_fast_block_chase,
         paired_early_min_seconds_left=paired_early_min_seconds_left,
         paired_middle_min_seconds_left=paired_middle_min_seconds_left,
         paired_stop_new_accumulation_seconds=paired_stop_new_accumulation_seconds,

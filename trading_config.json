@@ -62,7 +62,23 @@
     "take_profit_pct": 0.50,
     "hold_to_settle": true,
     "endgame_enabled": false,
-    "inventory_accumulation_enabled": true
+    "inventory_accumulation_enabled": true,
+    "velocity_engine_enabled": true,
+    "velocity_entry_enabled": true,
+    "velocity_initial_entry_override_enabled": false,
+    "velocity_paper_mode": true,
+    "velocity_windows_seconds": [1, 3, 5, 10],
+    "velocity_min_confidence": 75,
+    "velocity_signal_persistence_ms": 1000,
+    "velocity_max_book_age_ms": 1000,
+    "velocity_min_observations": 3,
+    "velocity_min_depth": 5,
+    "velocity_max_spread": 0.08,
+    "velocity_min_price_movement_ticks": 1,
+    "velocity_reversal_confirmation_enabled": true,
+    "velocity_require_ofi_confirmation": true,
+    "velocity_require_obi_confirmation": true,
+    "velocity_require_depth_validation": true
   },
   "workers": [
     {

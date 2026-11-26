@@ -11,6 +11,12 @@ from utils.market_time_phases import MarketPhase, PhasePolicy, allow_new_accumul
 from utils.paired_inventory_ledger import PairedInventoryLedger
 from utils.settlement_risk import exceeds_unmatched_cap, projected_unmatched
 
+try:
+    from utils.velocity_engine.models import VelocityContext, VelocitySignalState
+except ImportError:  # pragma: no cover
+    VelocityContext = None  # type: ignore[misc, assignment]
+    VelocitySignalState = None  # type: ignore[misc, assignment]
+
 
 _EPS = 1e-9
 
@@ -227,6 +233,29 @@ def evaluate_hedge(
     return rejects[0] if rejects else None
 
 
+def _velocity_reorder_initial_candidates(
+    candidates: list,
+    velocity: Optional["VelocityContext"],
+    *,
+    apply_velocity: bool,
+) -> tuple[list, Optional[str]]:
+    if not apply_velocity or velocity is None or not velocity.enabled or not velocity.valid:
+        return candidates, None
+    filtered = [c for c in candidates if c[0] not in velocity.avoid_buy_sides]
+    if not filtered and candidates:
+        return [], (
+            f"WAIT: velocity avoids {', '.join(_side_label(s) for s in velocity.avoid_buy_sides)} — "
+            "no qualifying alternative"
+        )
+    if velocity.preferred_side:
+        pref = velocity.preferred_side
+        preferred = [c for c in filtered if c[0] == pref]
+        other = [c for c in filtered if c[0] != pref]
+        if preferred:
+            filtered = preferred + other
+    return filtered, None
+
+
 def evaluate_initial_entry(
     ledger: PairedInventoryLedger,
     quotes: MarketQuoteView,
@@ -234,6 +263,8 @@ def evaluate_initial_entry(
     *,
     phase: MarketPhase,
     seconds_left: float,
+    velocity: Optional["VelocityContext"] = None,
+    apply_velocity_entry: bool = False,
 ) -> Optional[StrategyAction]:
     if float(seconds_left) <= float(cfg.phase_policy.stop_initial_entry_seconds) + _EPS:
         return StrategyAction(
@@ -346,7 +377,38 @@ def evaluate_initial_entry(
         candidates.sort(key=lambda row: (-row[1], -row[3]))
     else:
         candidates.sort(key=lambda row: (row[1], -row[3]))
+
+    candidates, vel_wait = _velocity_reorder_initial_candidates(
+        candidates, velocity, apply_velocity=apply_velocity_entry,
+    )
+    if vel_wait:
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason=vel_wait,
+            phase=phase,
+        )
+    if not candidates:
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason="WAIT: velocity filter removed all initial-entry candidates",
+            phase=phase,
+        )
+
     side, ask, qty, _ = candidates[0]
+    vel_note = ""
+    if (
+        apply_velocity_entry
+        and velocity
+        and velocity.valid
+        and velocity.preferred_side == side
+    ):
+        vel_note = f" [velocity prefers {_side_label(side)}]"
     opp = _opposite_side(side)
     max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
     max_hedge_opp = max_down if side == "YES" else max_up
@@ -366,11 +428,29 @@ def evaluate_initial_entry(
             f"({thr_phrase}). Buying {_side_label(side)} first. "
             f"Monitoring {_side_label(opp)} for a qualifying hedge"
             f"{f' (max {_side_label(opp)} ~{max_hedge_opp * 100:.1f}¢)' if max_hedge_opp > _EPS else ''}."
+            f"{vel_note}"
         ),
         phase=phase,
         max_hedge_up=max_up,
         max_hedge_down=max_down,
     )
+
+
+def _velocity_blocks_dca(side: str, velocity: Optional["VelocityContext"], *, apply: bool) -> Optional[str]:
+    if not apply or velocity is None or not velocity.enabled or not velocity.valid:
+        return None
+    if VelocitySignalState is None:
+        return None
+    metrics = velocity.up if side == "YES" else velocity.down
+    if side in velocity.avoid_buy_sides and side not in velocity.allow_recovery_dca_sides:
+        if metrics.state in (VelocitySignalState.FALLING_FAST, VelocitySignalState.FALLING_SLOW):
+            return (
+                f"BUY REJECTED: velocity — {_side_label(side)} {metrics.state.value}; "
+                "no recovery DCA without stabilization"
+            )
+    if metrics.state == VelocitySignalState.FALLING_FAST and side not in velocity.allow_recovery_dca_sides:
+        return f"BUY REJECTED: velocity — {_side_label(side)} FALLING_FAST"
+    return None
 
 
 def evaluate_dca_action(
@@ -380,6 +460,8 @@ def evaluate_dca_action(
     *,
     phase: MarketPhase,
     seconds_left: float,
+    velocity: Optional["VelocityContext"] = None,
+    apply_velocity_entry: bool = False,
 ) -> Optional[StrategyAction]:
     if not cfg.allow_adaptive_dca:
         return None
@@ -449,6 +531,17 @@ def evaluate_dca_action(
         )
     if ask <= 0:
         return None
+
+    vel_block = _velocity_blocks_dca(side, velocity, apply=apply_velocity_entry)
+    if vel_block:
+        return StrategyAction(
+            kind=ActionKind.REJECT,
+            side=side,
+            qty=0.0,
+            limit_price=ask,
+            reason=vel_block,
+            phase=phase,
+        )
 
     qty = min(cfg.dca_increment, depth, cfg.max_inventory_per_side - ledger.total_shares(side))
     headroom_um = max(0.0, cfg.max_unmatched_shares_per_side - existing)
@@ -629,6 +722,8 @@ def decide(
     cfg: PairedStrategyConfig,
     *,
     seconds_left: float,
+    velocity: Optional["VelocityContext"] = None,
+    apply_velocity_entry: bool = False,
 ) -> StrategyAction:
     phase = resolve_phase(seconds_left, cfg.phase_policy)
     max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
@@ -658,12 +753,28 @@ def decide(
             return exit_act
 
     # 3) Adaptive DCA on heavy side (only if unmatched exists).
-    dca = evaluate_dca_action(ledger, quotes, cfg, phase=phase, seconds_left=seconds_left)
+    dca = evaluate_dca_action(
+        ledger,
+        quotes,
+        cfg,
+        phase=phase,
+        seconds_left=seconds_left,
+        velocity=velocity,
+        apply_velocity_entry=apply_velocity_entry,
+    )
     if dca and dca.kind == ActionKind.BUY_DCA:
         return dca
 
     # 4) Initial entry when flat / matched-only.
-    entry = evaluate_initial_entry(ledger, quotes, cfg, phase=phase, seconds_left=seconds_left)
+    entry = evaluate_initial_entry(
+        ledger,
+        quotes,
+        cfg,
+        phase=phase,
+        seconds_left=seconds_left,
+        velocity=velocity,
+        apply_velocity_entry=apply_velocity_entry,
+    )
     if entry and entry.kind == ActionKind.BUY_ENTRY:
         return entry
 

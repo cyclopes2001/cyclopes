@@ -2488,6 +2488,42 @@ function _renderOutcomeStamp(bot) {
 }
 
 function _econClass(st){return st==='green'?'pair-econ-green':st==='amber'?'pair-econ-amber':st==='red'?'pair-econ-red':'text-zinc-300';}
+function _renderOrderBookVelocity(bot){
+  const v=bot.order_book_velocity;
+  if(!v||!v.enabled)return '';
+  const stale=!!v.stale;
+  const valid=!!v.valid&&!stale;
+  const conf=Number(v.confidence||0);
+  const cls=valid?'text-emerald-400/90':stale?'text-amber-400/90':'text-zinc-500';
+  const upSt=v.up_state||'—';
+  const dnSt=v.down_state||'—';
+  const upV=Number(v.up_velocity||0);
+  const dnV=Number(v.down_velocity||0);
+  const upObi=Number(v.up_obi||0);
+  const dnObi=Number(v.down_obi||0);
+  const upOfi=Number(v.up_ofi||0);
+  const dnOfi=Number(v.down_ofi||0);
+  const pref=v.preferred_side||'—';
+  const dec=v.decision||'WAIT';
+  const reason=String(v.reason||'').slice(0,120);
+  const entryCls=v.entry_classification||'—';
+  return `<div class="pair-panel mb-3 px-3 py-2.5 text-[11px] leading-snug">
+    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Order book velocity</div>
+    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-zinc-400">
+      <span>UP <span class="pair-up font-semibold">${upSt}</span></span>
+      <span>DOWN <span class="pair-down font-semibold">${dnSt}</span></span>
+      <span>UP v ${upV.toFixed(4)}</span>
+      <span>DOWN v ${dnV.toFixed(4)}</span>
+      <span>UP OBI ${upObi.toFixed(2)}</span>
+      <span>DOWN OBI ${dnObi.toFixed(2)}</span>
+      <span>UP OFI ${upOfi.toFixed(2)}</span>
+      <span>DOWN OFI ${dnOfi.toFixed(2)}</span>
+    </div>
+    <div class="mt-1.5 ${cls}">Conf ${conf.toFixed(0)}% · Pref ${pref} · ${dec}${stale?' · STALE':''}</div>
+    <div class="text-zinc-500 mt-0.5">${reason||'—'}</div>
+    <div class="text-[10px] text-zinc-600 mt-0.5">${entryCls}</div>
+  </div>`;
+}
 function _renderPairedTerminalCard(bot){
   const p=bot.paired||{};
   const pos=p.positions||{};
@@ -2558,6 +2594,7 @@ function _renderPairedTerminalCard(bot){
         ${riskLine}
       </div>
     </div>
+    ${_renderOrderBookVelocity(bot)}
     <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">
       <span>${bot.dry_run?'PAPER':'LIVE'} · FOK ${Number(bot.order_size||5)} sh</span>
       <span>Cum. $${_fmtMoney(bot.cumulative_pnl||0)}</span>

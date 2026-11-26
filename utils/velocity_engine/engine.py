@@ -28,7 +28,7 @@ from utils.velocity_engine.signals import (
     flow_disagrees,
     primary_window_velocity,
 )
-from utils.velocity_engine.snapshot import snapshot_from_book
+from utils.velocity_engine.snapshot import snapshot_from_book, snapshot_from_quote
 
 _LOG = logging.getLogger("velocity_engine")
 
@@ -54,11 +54,45 @@ class OrderBookVelocityEngine:
         self._state_since: Dict[str, float] = {"YES": 0.0, "NO": 0.0}
         self._last_context: Optional[VelocityContext] = None
         self._last_mono: float = 0.0
+        self._ws_disconnected_at: float = 0.0
+
+    def mark_ws_disconnected(self) -> None:
+        """Call when the market WebSocket drops; observations pause until resync."""
+        self._ws_disconnected_at = time.monotonic()
+
+    def ingest_ws_quote(
+        self,
+        side: str,
+        *,
+        best_bid: float,
+        best_ask: float,
+        best_bid_size: float,
+        best_ask_size: float,
+        ts_mono: Optional[float] = None,
+    ) -> None:
+        """Append a WS top-of-book observation (uses prior depth when present)."""
+        if not self.cfg.engine_enabled:
+            return
+        hist = self._yes if side.upper() == "YES" else self._no
+        prior = hist.latest()
+        snap = snapshot_from_quote(
+            side,
+            best_bid=best_bid,
+            best_ask=best_ask,
+            best_bid_size=best_bid_size,
+            best_ask_size=best_ask_size,
+            level_weights=self.cfg.obi_level_weights,
+            ts_mono=ts_mono,
+            prior=prior,
+        )
+        if snap and not snap.invalid:
+            hist.append(snap)
 
     def reset(self, market_id: str) -> None:
         self._market_id = market_id
         self._yes.clear()
         self._no.clear()
+        self._ws_disconnected_at = 0.0
         self._prev_state = {"YES": VelocitySignalState.UNCONFIRMED, "NO": VelocitySignalState.UNCONFIRMED}
         self._state_since = {"YES": time.monotonic(), "NO": time.monotonic()}
         self._last_context = None
@@ -150,6 +184,8 @@ class OrderBookVelocityEngine:
         book_age_ms = quote_age_ms if quote_age_ms is not None else 0.0
         if latest:
             book_age_ms = max(book_age_ms, (now - latest.ts_mono) * 1000.0)
+        if self._ws_disconnected_at > 0 and now - self._ws_disconnected_at < 5.0:
+            book_age_ms = max(book_age_ms, self.cfg.max_book_age_ms + 1.0)
 
         stale = book_age_ms > cfg.max_book_age_ms or snap is None
         obs_count = len(history.snapshots)

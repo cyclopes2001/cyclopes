@@ -2665,6 +2665,25 @@ class MarketWorker:
         cached = self._book_cache.get(side)
         return cached[1] if cached else None
 
+    def notify_velocity_ws_quote(
+        self,
+        side: str,
+        bid: float,
+        ask: float,
+        *,
+        bid_size: float = 0.0,
+        ask_size: float = 0.0,
+    ) -> None:
+        """Forward live WS top-of-book into the velocity engine (no extra socket)."""
+        handler = getattr(self, "_velocity_ws_handler", None)
+        if handler:
+            handler(side, bid, ask, bid_size, ask_size)
+
+    def notify_velocity_ws_disconnect(self) -> None:
+        handler = getattr(self, "_velocity_ws_disconnect", None)
+        if handler:
+            handler()
+
     @staticmethod
     def _book_best_prices(book: Any) -> Tuple[float, float]:
         """Return (best_ask, best_bid) from a CLOB order book snapshot."""
@@ -3360,18 +3379,37 @@ class MarketWorker:
                                     or asset.get("size")
                                     or 0
                                 )
+                                bid_sz = float(
+                                    asset.get("bid_size")
+                                    or asset.get("best_bid_size")
+                                    or 0
+                                )
                                 if aid == self.active_market["yes_id"]:
                                     if ask > 0:
                                         self.prices["YES"] = normalize_polymarket_price(ask)
                                         self._touch_quote("YES", ask_size=ask_sz)
                                     if bid > 0:
                                         self.bids["YES"] = normalize_polymarket_price(bid)
+                                    self.notify_velocity_ws_quote(
+                                        "YES",
+                                        self.bids.get("YES", bid),
+                                        self.prices.get("YES", ask),
+                                        bid_size=bid_sz,
+                                        ask_size=ask_sz,
+                                    )
                                 elif aid == self.active_market["no_id"]:
                                     if ask > 0:
                                         self.prices["NO"] = normalize_polymarket_price(ask)
                                         self._touch_quote("NO", ask_size=ask_sz)
                                     if bid > 0:
                                         self.bids["NO"] = normalize_polymarket_price(bid)
+                                    self.notify_velocity_ws_quote(
+                                        "NO",
+                                        self.bids.get("NO", bid),
+                                        self.prices.get("NO", ask),
+                                        bid_size=bid_sz,
+                                        ask_size=ask_sz,
+                                    )
                         elif e_type == "price_change":
                             for change in ev.get("price_changes", []):
                                 aid = change.get("asset_id")
@@ -3385,17 +3423,30 @@ class MarketWorker:
                                         self._touch_quote("YES")
                                     if bid > 0:
                                         self.bids["YES"] = normalize_polymarket_price(bid)
+                                    if ask > 0 or bid > 0:
+                                        self.notify_velocity_ws_quote(
+                                            "YES",
+                                            float(self.bids.get("YES", 0)),
+                                            float(self.prices.get("YES", 0)),
+                                        )
                                 elif aid == self.active_market["no_id"]:
                                     if ask > 0:
                                         self.prices["NO"] = normalize_polymarket_price(ask)
                                         self._touch_quote("NO")
                                     if bid > 0:
                                         self.bids["NO"] = normalize_polymarket_price(bid)
+                                    if ask > 0 or bid > 0:
+                                        self.notify_velocity_ws_quote(
+                                            "NO",
+                                            float(self.bids.get("NO", 0)),
+                                            float(self.prices.get("NO", 0)),
+                                        )
 
             except websockets.exceptions.ConnectionClosed:
                 print("\n⚠️ Connection lost. Reconnecting in 3s...")
                 self._book_cache.clear()
                 self._ws_market_data_stale = True
+                self.notify_velocity_ws_disconnect()
                 await self.cancel_all_open_orders()
                 await asyncio.sleep(3)
                 continue

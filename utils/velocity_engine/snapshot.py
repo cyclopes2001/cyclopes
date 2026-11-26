@@ -59,6 +59,55 @@ def _top_n(levels: Sequence[Tuple[float, float]], n: int, *, reverse: bool) -> T
     return tuple(ordered[:n])
 
 
+def snapshot_from_quote(
+    side: str,
+    *,
+    best_bid: float,
+    best_ask: float,
+    best_bid_size: float,
+    best_ask_size: float,
+    level_weights: Sequence[float],
+    ts_mono: Optional[float] = None,
+    prior: Optional[BookSnapshot] = None,
+) -> Optional[BookSnapshot]:
+    """Top-of-book snapshot (WS); reuse prior depth levels when available."""
+    if best_ask <= 0:
+        return None
+    bids5: Tuple[Tuple[float, float], ...]
+    asks5: Tuple[Tuple[float, float], ...]
+    if prior and not prior.crossed:
+        bids5 = ((best_bid, best_bid_size),) + tuple(prior.bid_levels[1:5])
+        asks5 = ((best_ask, best_ask_size),) + tuple(prior.ask_levels[1:5])
+    else:
+        bids5 = ((best_bid, best_bid_size),) if best_bid > 0 else ()
+        asks5 = ((best_ask, best_ask_size),)
+    fake_book = {
+        "bids": [[p, s] for p, s in bids5],
+        "asks": [[p, s] for p, s in asks5],
+    }
+    snap = snapshot_from_book(side, fake_book, level_weights=level_weights, ts_mono=ts_mono)
+    if snap and prior and prior.sequence:
+        return BookSnapshot(
+            side=snap.side,
+            ts_mono=snap.ts_mono,
+            ts_wall=snap.ts_wall,
+            best_bid=snap.best_bid,
+            best_ask=snap.best_ask,
+            best_bid_size=snap.best_bid_size,
+            best_ask_size=snap.best_ask_size,
+            mid=snap.mid,
+            spread=snap.spread,
+            bid_levels=bids5,
+            ask_levels=asks5,
+            bid_depth_5=snap.bid_depth_5,
+            ask_depth_5=snap.ask_depth_5,
+            obi=snap.obi,
+            crossed=snap.crossed,
+            sequence=prior.sequence,
+        )
+    return snap
+
+
 def snapshot_from_book(
     side: str,
     book: Any,

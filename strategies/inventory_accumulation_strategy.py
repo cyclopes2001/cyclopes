@@ -32,6 +32,7 @@ from utils.profitability_gate import check_executable_depth
 from utils.market_time_phases import allow_new_accumulation as phase_allows_new_accumulation
 from utils.velocity_engine import OrderBookVelocityEngine, load_velocity_config
 from utils.velocity_engine.entry_selection import classify_proposed_order
+from utils.velocity_engine.paper import VelocityPaperJournal
 
 if TYPE_CHECKING:
     from bot import MarketWorker
@@ -127,6 +128,7 @@ class InventoryAccumulationStrategy:
         self._activity_feed: dict[str, list] = {}
         self._decision_feed: dict[str, list] = {}
         self._velocity_engines: dict[str, OrderBookVelocityEngine] = {}
+        self._velocity_paper: dict[str, VelocityPaperJournal] = {}
 
     def _key(self, worker: "MarketWorker") -> str:
         return worker.worker_config.key
@@ -233,6 +235,33 @@ class InventoryAccumulationStrategy:
         remaining = max(0.0, req - filled)
         return remaining * px if remaining > 0 and px > 0 else 0.0
 
+    def _ensure_velocity_ws_hooks(self, worker: "MarketWorker") -> None:
+        key = self._key(worker)
+        if getattr(worker, "_velocity_hooks_key", None) == key:
+            return
+        worker._velocity_hooks_key = key
+
+        def _ingest(side: str, bid: float, ask: float, bid_sz: float, ask_sz: float) -> None:
+            vcfg = load_velocity_config(worker.worker_config)
+            if not vcfg.engine_enabled:
+                return
+            eng = self._velocity_engine(worker)
+            eng.ingest_ws_quote(
+                side,
+                best_bid=float(bid),
+                best_ask=float(ask),
+                best_bid_size=float(bid_sz) if bid_sz > 0 else 0.0,
+                best_ask_size=float(ask_sz) if ask_sz > 0 else float(worker.best_ask_size(side)),
+            )
+
+        def _disconnect() -> None:
+            eng = self._velocity_engines.get(key)
+            if eng is not None:
+                eng.mark_ws_disconnected()
+
+        worker._velocity_ws_handler = _ingest
+        worker._velocity_ws_disconnect = _disconnect
+
     def _velocity_engine(self, worker: "MarketWorker") -> OrderBookVelocityEngine:
         key = self._key(worker)
         eng = self._velocity_engines.get(key)
@@ -253,23 +282,71 @@ class InventoryAccumulationStrategy:
         worker.refresh_order_book("NO", max_age_seconds=0.35)
         age_s = worker.max_quote_age_seconds()
         age_ms = (age_s * 1000.0) if age_s is not None else None
+        if getattr(worker, "_ws_market_data_stale", False) and age_ms is not None:
+            age_ms = max(age_ms, vcfg.max_book_age_ms + 1.0)
         snap = eng.update_from_worker(
             market_id=cid,
             yes_book=worker.cached_order_book("YES"),
             no_book=worker.cached_order_book("NO"),
             quote_age_ms=age_ms,
         )
-        worker.dashboard["order_book_velocity"] = snap.decision.to_dashboard_dict()
-        _LOG.info(
-            json.dumps(
-                {
-                    "event": "velocity_signal",
-                    "worker": self._key(worker),
-                    **snap.decision.to_audit_dict(),
-                }
-            )
-        )
+        obv = snap.decision.to_dashboard_dict()
+        vcfg = load_velocity_config(worker.worker_config)
+        if vcfg.paper_mode:
+            journal = self._velocity_paper.setdefault(self._key(worker), VelocityPaperJournal())
+            up_mid = snap.context.up.best_ask or worker.best_ask("YES")
+            dn_mid = snap.context.down.best_ask or worker.best_ask("NO")
+            journal.advance(yes_mid=float(up_mid), no_mid=float(dn_mid))
+            obv["paper"] = journal.summary()
+        worker.dashboard["order_book_velocity"] = obv
         return snap
+
+    def _log_velocity_audit(
+        self,
+        worker: "MarketWorker",
+        ledger: PairedInventoryLedger,
+        snap,
+        action: Optional[StrategyAction],
+        *,
+        seconds_left: float,
+    ) -> None:
+        if snap is None:
+            return
+        from utils.settlement_risk import settlement_outcomes
+
+        m = ledger.metrics()
+        outlook = settlement_outcomes(
+            yes_shares=m.up_total_shares,
+            no_shares=m.down_total_shares,
+            total_cost=m.capital_committed,
+        )
+        slug = worker.market_slug or worker.canonical_market_id() or ""
+        up = snap.context.up
+        down = snap.context.down
+        extras = {
+            "event": "velocity_decision_audit",
+            "worker": self._key(worker),
+            "market_slug": slug,
+            "seconds_left": seconds_left,
+            "up_best_bid": up.best_bid,
+            "up_best_ask": up.best_ask,
+            "down_best_bid": down.best_bid,
+            "down_best_ask": down.best_ask,
+            "yes_shares_before": m.up_total_shares,
+            "no_shares_before": m.down_total_shares,
+            "matched_pairs": outlook.matched_pairs,
+            "unmatched_yes": m.up_unmatched_shares,
+            "unmatched_no": m.down_unmatched_shares,
+            "capital_committed": m.capital_committed,
+            "pnl_if_yes_wins": outlook.pnl_if_yes_wins,
+            "pnl_if_no_wins": outlook.pnl_if_no_wins,
+            "worst_case_pnl": outlook.worst_case_pnl,
+            "action_kind": action.kind.value if action else None,
+            "action_side": action.side if action else None,
+            "action_reason": action.reason if action else None,
+            "projected_pair_cost": action.projected_pair_cost if action else None,
+        }
+        _LOG.info(json.dumps(snap.decision.to_audit_dict(extras=extras)))
 
     def _paper_block_velocity_live(
         self,
@@ -866,6 +943,7 @@ class InventoryAccumulationStrategy:
             )
             return
 
+        self._ensure_velocity_ws_hooks(worker)
         quotes = self._quotes(worker)
         vel_snap = self._update_velocity(worker)
         vcfg = load_velocity_config(worker.worker_config)
@@ -882,6 +960,16 @@ class InventoryAccumulationStrategy:
             apply_velocity_entry=apply_velocity,
         )
         action = self._paper_block_velocity_live(worker, action, apply_velocity=apply_velocity)
+        if vel_snap and vcfg.paper_mode:
+            journal = self._velocity_paper.setdefault(self._key(worker), VelocityPaperJournal())
+            journal.record(
+                yes_mid=float(worker.best_ask("YES")),
+                no_mid=float(worker.best_ask("NO")),
+                decision=vel_snap.decision.decision,
+                preferred_side=vel_snap.decision.preferred_side,
+                action_kind=action.kind.value,
+            )
+        self._log_velocity_audit(worker, ledger, vel_snap, action, seconds_left=seconds_left)
         self._log_decision(worker, action)
         self._publish_dashboard(
             worker, ledger, cfg, action, seconds_left=seconds_left, phase=phase,

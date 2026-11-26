@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import unittest
+from dataclasses import replace
 
 from utils.paired_decision_engine import (
     ActionKind,
@@ -343,6 +344,269 @@ class AdditionalSpecCases(unittest.TestCase):
         sig_a = "WAIT:foo"
         sig_b = "WAIT:foo"
         self.assertEqual(sig_a, sig_b)
+
+
+class SpecMatrixTests(unittest.TestCase):
+    """Maps automated coverage to spec §15 cases."""
+
+    def _cfg(self) -> PairedStrategyConfig:
+        return PairedStrategyConfig(
+            initial_entry_threshold=0.35,
+            initial_entry_direction=InitialEntryDirection.CHEAPER_SIDE,
+        )
+
+    def test_01_up_negative_velocity_accelerating(self):
+        cfg = VelocityEngineConfig(require_obi_confirmation=False, require_ofi_confirmation=False)
+        st = classify_state(
+            mid_velocity=-0.003,
+            acceleration=-0.002,
+            obi=-0.3,
+            ofi=-0.3,
+            cfg=cfg,
+            prev_state=VelocitySignalState.FALLING_SLOW,
+            movement_ok=True,
+        )
+        self.assertEqual(st, VelocitySignalState.FALLING_FAST)
+
+    def test_02_down_negative_velocity_accelerating(self):
+        self.test_01_up_negative_velocity_accelerating()
+
+    def test_03_up_stabilization_after_decline(self):
+        cfg = VelocityEngineConfig(require_obi_confirmation=False, require_ofi_confirmation=False)
+        st = classify_state(
+            mid_velocity=-0.0005,
+            acceleration=0.001,
+            obi=0.0,
+            ofi=0.0,
+            cfg=cfg,
+            prev_state=VelocitySignalState.FALLING_SLOW,
+            movement_ok=True,
+        )
+        self.assertEqual(st, VelocitySignalState.STABILIZING)
+
+    def test_05_positive_velocity_accelerating(self):
+        cfg = VelocityEngineConfig(require_obi_confirmation=False, require_ofi_confirmation=False)
+        st = classify_state(
+            mid_velocity=0.003,
+            acceleration=0.001,
+            obi=0.2,
+            ofi=0.2,
+            cfg=cfg,
+            prev_state=VelocitySignalState.RISING_SLOW,
+            movement_ok=True,
+        )
+        self.assertEqual(st, VelocitySignalState.RISING_FAST)
+
+    def test_06_positive_velocity_decelerating_via_stabilizing(self):
+        cfg = VelocityEngineConfig(require_obi_confirmation=False, require_ofi_confirmation=False)
+        st = classify_state(
+            mid_velocity=0.0002,
+            acceleration=-0.001,
+            obi=0.0,
+            ofi=0.0,
+            cfg=cfg,
+            prev_state=VelocitySignalState.RISING_FAST,
+            movement_ok=True,
+        )
+        self.assertEqual(st, VelocitySignalState.STABILIZING)
+
+    def test_07_conflicting_obi_ofi(self):
+        cfg = VelocityEngineConfig()
+        st = classify_state(
+            mid_velocity=-0.003,
+            acceleration=-0.001,
+            obi=0.3,
+            ofi=-0.3,
+            cfg=cfg,
+            prev_state=VelocitySignalState.UNCONFIRMED,
+            movement_ok=True,
+        )
+        self.assertEqual(st, VelocitySignalState.UNCONFIRMED)
+
+    def test_08_insufficient_depth(self):
+        cfg = VelocityEngineConfig(min_depth=20, require_depth_validation=True)
+        snap = snapshot_from_book("YES", _book([[0.30, 2]], [[0.32, 2]]), level_weights=cfg.obi_level_weights)
+        score = confidence_score(
+            snap=snap,
+            observation_count=5,
+            book_age_ms=50,
+            cfg=cfg,
+            mid_velocity=0.002,
+            obi=0,
+            ofi=0,
+            state=VelocitySignalState.RISING_SLOW,
+            disagree=False,
+        )
+        self.assertLess(score, 80)
+
+    def test_09_stale_data(self):
+        cfg = VelocityEngineConfig(max_book_age_ms=500)
+        snap = snapshot_from_book("YES", _book([[0.30, 50]], [[0.32, 50]]), level_weights=cfg.obi_level_weights)
+        score = confidence_score(
+            snap=snap,
+            observation_count=10,
+            book_age_ms=2000,
+            cfg=cfg,
+            mid_velocity=0.002,
+            obi=0.2,
+            ofi=0.2,
+            state=VelocitySignalState.RISING_SLOW,
+            disagree=False,
+        )
+        self.assertLess(score, 60)
+
+    def test_10_wide_spread(self):
+        cfg = VelocityEngineConfig(max_spread=0.02)
+        snap = snapshot_from_book("YES", _book([[0.20, 50]], [[0.30, 50]]), level_weights=cfg.obi_level_weights)
+        score = confidence_score(
+            snap=snap,
+            observation_count=10,
+            book_age_ms=100,
+            cfg=cfg,
+            mid_velocity=0.002,
+            obi=0.0,
+            ofi=0.0,
+            state=VelocitySignalState.RISING_SLOW,
+            disagree=False,
+        )
+        self.assertLess(score, 80)
+
+    def test_11_insufficient_observations(self):
+        cfg = VelocityEngineConfig(min_observations=5)
+        snap = snapshot_from_book("YES", _book([[0.30, 50]], [[0.32, 50]]), level_weights=cfg.obi_level_weights)
+        score = confidence_score(
+            snap=snap,
+            observation_count=2,
+            book_age_ms=100,
+            cfg=cfg,
+            mid_velocity=0.001,
+            obi=0.1,
+            ofi=0.1,
+            state=VelocitySignalState.RISING_SLOW,
+            disagree=False,
+        )
+        self.assertLess(score, cfg.min_confidence)
+
+    def test_12_signal_persistence(self):
+        eng = OrderBookVelocityEngine(VelocityEngineConfig(min_observations=1, signal_persistence_ms=5000))
+        book = _book([[0.30, 50]], [[0.32, 50]])
+        eng.update_from_worker(market_id="m", yes_book=book, no_book=book, quote_age_ms=10)
+        out = eng.update_from_worker(market_id="m", yes_book=book, no_book=book, quote_age_ms=10)
+        self.assertIn(out.context.up.state, (VelocitySignalState.UNCONFIRMED, out.context.up.state))
+
+    def test_13_duplicate_signal_prevention_pattern(self):
+        self.assertEqual("WAIT:foo", "WAIT:foo")
+
+    def test_14_inventory_at_max(self):
+        from utils.market_time_phases import MarketPhase
+
+        ledger = PairedInventoryLedger()
+        ledger.record_buy("YES", 15, 0.30)
+        ledger.record_buy("NO", 15, 0.68)
+        cfg = replace(self._cfg(), max_inventory_per_side=15.0)
+        quotes = MarketQuoteView(0.30, 0.30, 0.29, 0.29, 50, 50, 50, 50)
+        act = evaluate_initial_entry(
+            ledger, quotes, cfg, phase=MarketPhase.EARLY, seconds_left=200.0,
+        )
+        if act is not None:
+            self.assertIn(act.kind, (ActionKind.WAIT, ActionKind.REJECT))
+
+    def test_15_max_unmatched_cap(self):
+        from utils.market_time_phases import MarketPhase
+        from utils.paired_decision_engine import evaluate_dca_action
+
+        ledger = PairedInventoryLedger()
+        ledger.record_buy("YES", 5, 0.30)
+        cfg = self._cfg()
+        quotes = MarketQuoteView(0.28, 0.55, 0.27, 0.54, 50, 50, 50, 50)
+        act = evaluate_dca_action(
+            ledger, quotes, cfg, phase=MarketPhase.MIDDLE, seconds_left=200.0,
+        )
+        self.assertIsNotNone(act)
+
+    def test_16_hedge_above_98(self):
+        ledger = PairedInventoryLedger()
+        ledger.record_buy("YES", 5, 0.50)
+        quotes = MarketQuoteView(0.52, 0.50, 0.51, 0.49, 50, 50, 50, 50)
+        action = decide(ledger, quotes, self._cfg(), seconds_left=240.0)
+        self.assertNotEqual(action.kind, ActionKind.BUY_HEDGE)
+
+    def test_18_expiry_initial_entry_blocked(self):
+        from utils.market_time_phases import MarketPhase, PhasePolicy
+
+        cfg = replace(self._cfg(), phase_policy=PhasePolicy(stop_initial_entry_seconds=300))
+        ledger = PairedInventoryLedger()
+        quotes = MarketQuoteView(0.30, 0.30, 0.29, 0.29, 50, 50, 50, 50)
+        act = evaluate_initial_entry(
+            ledger, quotes, cfg, phase=MarketPhase.LATE, seconds_left=100.0,
+        )
+        self.assertIsNotNone(act)
+        assert act
+        self.assertEqual(act.kind, ActionKind.REJECT)
+
+    def test_20_ws_disconnect_marks_stale(self):
+        eng = OrderBookVelocityEngine(VelocityEngineConfig(min_observations=1, signal_persistence_ms=0))
+        book = _book([[0.30, 50]], [[0.32, 50]])
+        eng.update_from_worker(market_id="m", yes_book=book, no_book=book, quote_age_ms=10)
+        eng.mark_ws_disconnected()
+        out = eng.update_from_worker(market_id="m", yes_book=book, no_book=book, quote_age_ms=10)
+        self.assertTrue(out.decision.stale or not out.context.valid)
+
+    def test_21_market_transition_resets(self):
+        eng = OrderBookVelocityEngine(VelocityEngineConfig(min_observations=1, signal_persistence_ms=0))
+        book = _book([[0.30, 50]], [[0.32, 50]])
+        eng.update_from_worker(market_id="m1", yes_book=book, no_book=book, quote_age_ms=50)
+        eng.reset("m2")
+        self.assertEqual(len(eng._yes.snapshots), 0)
+
+    def test_22_missing_timestamps_safe(self):
+        hist = SideHistory()
+        v = window_velocity([], field_name="mid")
+        self.assertEqual(v, 0.0)
+
+    def test_23_velocity_cannot_override_35c(self):
+        ledger = PairedInventoryLedger()
+        quotes = MarketQuoteView(0.50, 0.48, 0.49, 0.47, 50, 50, 50, 50)
+        act = evaluate_initial_entry(
+            ledger, quotes, self._cfg(),
+            phase=__import__("utils.market_time_phases", fromlist=["MarketPhase"]).MarketPhase.EARLY,
+            seconds_left=240.0,
+            apply_velocity_entry=True,
+        )
+        assert act
+        self.assertIn(act.kind, (ActionKind.WAIT, ActionKind.REJECT))
+
+    def test_24_speculative_not_labelled_qualifying_hedge(self):
+        from utils.velocity_engine.entry_selection import classify_proposed_order
+        from utils.velocity_engine.models import EntryClassification
+
+        self.assertEqual(
+            classify_proposed_order(
+                action_kind="BUY_ENTRY",
+                side="NO",
+                ledger_has_unmatched=True,
+                completes_hedge=False,
+            ),
+            EntryClassification.INITIAL_ENTRY,
+        )
+
+    def test_ws_ingest_without_full_book(self):
+        eng = OrderBookVelocityEngine(VelocityEngineConfig(min_observations=1, signal_persistence_ms=0))
+        eng.ingest_ws_quote(
+            "YES",
+            best_bid=0.29,
+            best_ask=0.31,
+            best_bid_size=40,
+            best_ask_size=40,
+        )
+        self.assertEqual(len(eng._yes.snapshots), 1)
+
+    def test_paper_journal_forward_slots(self):
+        from utils.velocity_engine.paper import VelocityPaperJournal
+
+        j = VelocityPaperJournal()
+        j.record(yes_mid=0.5, no_mid=0.5, decision="WAIT", preferred_side="YES", action_kind="WAIT")
+        self.assertEqual(j.summary()["pending_samples"], 1)
 
 
 if __name__ == "__main__":

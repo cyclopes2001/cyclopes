@@ -123,10 +123,12 @@ class VelocityDecision:
             "down_label": down_label,
         }
 
-    def to_audit_dict(self) -> Dict[str, object]:
+    def to_audit_dict(self, *, extras: Optional[Dict[str, object]] = None) -> Dict[str, object]:
         d = self.to_dashboard_dict()
         d["market_id"] = self.market_id
         d["ts"] = self.ts
         d["up_acceleration"] = self.up_acceleration
         d["down_acceleration"] = self.down_acceleration
+        if extras:
+            d.update(extras)
         return d

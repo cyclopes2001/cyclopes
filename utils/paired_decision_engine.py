@@ -15,7 +15,7 @@ _EPS = 1e-9
 
 
 class InitialEntryDirection(str, Enum):
-    CHEAP_SIDE = "CHEAP_SIDE"
+    CHEAPER_SIDE = "CHEAPER_SIDE"
     EXPENSIVE_SIDE = "EXPENSIVE_SIDE"
 
 
@@ -55,8 +55,8 @@ class MarketQuoteView:
 
 @dataclass(frozen=True)
 class PairedStrategyConfig:
-    initial_entry_threshold: float = 0.64
-    initial_entry_direction: InitialEntryDirection = InitialEntryDirection.EXPENSIVE_SIDE
+    initial_entry_threshold: float = 0.35
+    initial_entry_direction: InitialEntryDirection = InitialEntryDirection.CHEAPER_SIDE
     target_combined_cost: float = 0.98
     max_combined_cost: float = 0.98
     max_inventory_per_side: float = 15.0
@@ -91,6 +91,20 @@ def _initial_ask_qualifies(ask: float, cfg: PairedStrategyConfig) -> bool:
     if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE:
         return ask + _EPS >= cfg.initial_entry_threshold
     return ask <= cfg.initial_entry_threshold + _EPS
+
+
+def _lowest_executable_ask(quotes: MarketQuoteView) -> Tuple[str, float]:
+    low_side = "YES"
+    low = quotes.yes_ask or 0.0
+    no_ask = quotes.no_ask or 0.0
+    if no_ask > _EPS and (low <= _EPS or no_ask + _EPS < low):
+        low_side = "NO"
+        low = no_ask
+    elif low > _EPS and abs(no_ask - low) <= _EPS and no_ask > 0:
+        if quotes.no_ask_size + _EPS >= quotes.yes_ask_size:
+            low_side = "NO"
+            low = no_ask
+    return low_side, low
 
 
 def _highest_executable_ask(quotes: MarketQuoteView) -> Tuple[str, float]:
@@ -246,26 +260,54 @@ def evaluate_initial_entry(
             continue
         candidates.append((side, ask, qty, depth))
 
-    if not candidates:
-        high_side, high_ask = _highest_executable_ask(quotes)
-        thr_c = cfg.initial_entry_threshold * 100.0
-        if (
-            cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
-            and high_ask > 0
-            and high_ask + _EPS < cfg.initial_entry_threshold
-        ):
+    if len(candidates) >= 2:
+        y_ask = quotes.yes_ask or 0.0
+        n_ask = quotes.no_ask or 0.0
+        if y_ask + n_ask > 1.0 + 0.02:
             return StrategyAction(
                 kind=ActionKind.WAIT,
                 side=None,
                 qty=0.0,
                 limit_price=0.0,
                 reason=(
-                    f"INITIAL ENTRY REJECTED: Highest executable side price was "
-                    f"{high_ask * 100:.1f}¢ ({_side_label(high_side)}). "
-                    f"Required minimum: {thr_c:.0f}¢."
+                    "INITIAL ENTRY REJECTED: both sides qualify but combined asks exceed "
+                    f"${y_ask + n_ask:.2f} — waiting for synchronized order-book refresh."
                 ),
                 phase=phase,
             )
+
+    if not candidates:
+        thr_c = cfg.initial_entry_threshold * 100.0
+        if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE:
+            high_side, high_ask = _highest_executable_ask(quotes)
+            if high_ask > 0 and high_ask + _EPS < cfg.initial_entry_threshold:
+                return StrategyAction(
+                    kind=ActionKind.WAIT,
+                    side=None,
+                    qty=0.0,
+                    limit_price=0.0,
+                    reason=(
+                        f"INITIAL ENTRY REJECTED: Highest executable side price was "
+                        f"{high_ask * 100:.1f}¢ ({_side_label(high_side)}). "
+                        f"Required minimum: {thr_c:.0f}¢."
+                    ),
+                    phase=phase,
+                )
+        else:
+            low_side, low_ask = _lowest_executable_ask(quotes)
+            if low_ask > cfg.initial_entry_threshold + _EPS:
+                return StrategyAction(
+                    kind=ActionKind.WAIT,
+                    side=None,
+                    qty=0.0,
+                    limit_price=0.0,
+                    reason=(
+                        f"INITIAL ENTRY REJECTED: Cheapest executable side price was "
+                        f"{low_ask * 100:.1f}¢ ({_side_label(low_side)}). "
+                        f"Maximum permitted: {thr_c:.0f}¢."
+                    ),
+                    phase=phase,
+                )
         return StrategyAction(
             kind=ActionKind.WAIT,
             side=None,
@@ -274,7 +316,7 @@ def evaluate_initial_entry(
             reason=(
                 "WAIT: no eligible initial entry — threshold, depth, or capacity"
                 if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
-                else "WAIT: no side below initial entry threshold with capacity"
+                else "WAIT: no side at or below initial entry max with capacity"
             ),
             phase=phase,
         )
@@ -288,6 +330,11 @@ def evaluate_initial_entry(
     max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
     max_hedge_opp = max_down if side == "YES" else max_up
     thr_c = cfg.initial_entry_threshold * 100.0
+    thr_phrase = (
+        f"threshold: {thr_c:.0f}¢"
+        if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
+        else f"maximum: {thr_c:.0f}¢"
+    )
     return StrategyAction(
         kind=ActionKind.BUY_ENTRY,
         side=side,
@@ -295,7 +342,7 @@ def evaluate_initial_entry(
         limit_price=ask,
         reason=(
             f"INITIAL ENTRY: {_side_label(side)} qualified at {ask * 100:.1f}¢ "
-            f"(threshold: {thr_c:.0f}¢). Buying {_side_label(side)} first. "
+            f"({thr_phrase}). Buying {_side_label(side)} first. "
             f"Monitoring {_side_label(opp)} for a qualifying hedge"
             f"{f' (max {_side_label(opp)} ~{max_hedge_opp * 100:.1f}¢)' if max_hedge_opp > _EPS else ''}."
         ),

@@ -187,8 +187,8 @@ class WorkerConfig:
     target_combined_pair_cost: float = 0.98
     max_combined_pair_cost: float = 0.98
     # Adaptive paired inventory accumulation
-    paired_initial_entry_threshold: float = 0.64
-    paired_initial_entry_direction: str = "EXPENSIVE_SIDE"
+    paired_initial_entry_threshold: float = 0.35
+    paired_initial_entry_direction: str = "CHEAPER_SIDE"
     paired_max_inventory_per_side: float = 15.0
     paired_unmatched_inventory_target: float = 5.0
     paired_dca_increment: float = 5.0
@@ -525,10 +525,10 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
             raw,
             defaults,
             "paired_initial_entry_threshold",
-            "initial_entry_min_price",
-            default=0.64,
+            "initial_entry_max_price",
+            default=0.35,
         ),
-        0.64,
+        0.35,
     )
     paired_initial_entry_direction = str(
         _cfg_get(
@@ -536,13 +536,15 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
             defaults,
             "paired_initial_entry_direction",
             "initial_entry_direction",
-            default="EXPENSIVE_SIDE",
+            default="CHEAPER_SIDE",
         )
     ).strip().upper()
-    if paired_initial_entry_direction not in ("EXPENSIVE_SIDE", "CHEAP_SIDE"):
+    if paired_initial_entry_direction == "CHEAP_SIDE":
+        paired_initial_entry_direction = "CHEAPER_SIDE"
+    if paired_initial_entry_direction not in ("EXPENSIVE_SIDE", "CHEAPER_SIDE"):
         _fatal(
             f"{asset}:{window}: paired_initial_entry_direction must be "
-            f"EXPENSIVE_SIDE or CHEAP_SIDE (got {paired_initial_entry_direction!r})"
+            f"EXPENSIVE_SIDE or CHEAPER_SIDE (got {paired_initial_entry_direction!r})"
         )
     paired_max_inventory_per_side = _parse_max_shares(
         "paired_max_inventory_per_side",
@@ -1578,9 +1580,13 @@ if WORKER_CONFIGS:
             f"max_order={wc0.max_order_size} | max_shares={wc0.max_shares}"
         )
     if wc0.strategy_mode == "paired_inventory_accumulation":
+        _entry_cmp = (
+            f"entry≤{wc0.paired_initial_entry_threshold:.2f}"
+            if wc0.paired_initial_entry_direction == "CHEAPER_SIDE"
+            else f"entry≥{wc0.paired_initial_entry_threshold:.2f}"
+        )
         print(
-            f"📈 Paired inventory: {wc0.paired_initial_entry_direction} "
-            f"entry≥{wc0.paired_initial_entry_threshold:.2f} | "
+            f"📈 Paired inventory: {wc0.paired_initial_entry_direction} {_entry_cmp} | "
             f"target_pair≤{wc0.target_combined_pair_cost:.2f} | "
             f"max/side={wc0.paired_max_inventory_per_side:.0f} | "
             f"unmatched_target={wc0.paired_unmatched_inventory_target:.0f} | "

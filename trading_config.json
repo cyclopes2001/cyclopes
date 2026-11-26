@@ -1,8 +1,8 @@
 {
   "defaults": {
     "strategy_mode": "paired_inventory_accumulation",
-    "paired_initial_entry_threshold": 0.64,
-    "paired_initial_entry_direction": "EXPENSIVE_SIDE",
+    "paired_initial_entry_threshold": 0.35,
+    "paired_initial_entry_direction": "CHEAPER_SIDE",
     "cheap_side_min_price": 0.05,
     "cheap_side_max_price": 0.35,
     "target_combined_pair_cost": 0.98,

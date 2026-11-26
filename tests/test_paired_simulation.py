@@ -32,7 +32,7 @@ class SimResult:
 
 def _cfg(**kwargs) -> PairedStrategyConfig:
     base = dict(
-        initial_entry_threshold=0.64,
+        initial_entry_threshold=0.35,
         target_combined_cost=0.98,
         max_combined_cost=0.98,
         max_inventory_per_side=15.0,
@@ -120,10 +120,10 @@ def run_scenario(
 
 class SimulationScenarios(unittest.TestCase):
     def test_1_up_falls_then_down_reaches_hedge(self):
-        # Expensive UP first, then hedge DOWN when cheap enough
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
-            (230, MarketQuoteView(0.67, 0.31, 0.66, 0.30, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
+            (230, MarketQuoteView(0.24, 0.76, 0.23, 0.75, 20, 20, 20, 20)),
+            (200, MarketQuoteView(0.24, 0.64, 0.23, 0.63, 20, 20, 20, 20)),
         ]
         res = run_scenario(ticks)
         self.assertGreaterEqual(res.completed_pairs + 1e-9, 5)
@@ -132,9 +132,9 @@ class SimulationScenarios(unittest.TestCase):
 
     def test_2_up_falls_down_stays_expensive_no_bad_dca(self):
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
-            (230, MarketQuoteView(0.55, 0.76, 0.54, 0.75, 20, 20, 20, 20)),
-            (210, MarketQuoteView(0.50, 0.76, 0.49, 0.75, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
+            (230, MarketQuoteView(0.24, 0.76, 0.23, 0.75, 20, 20, 20, 20)),
+            (210, MarketQuoteView(0.22, 0.76, 0.21, 0.75, 20, 20, 20, 20)),
         ]
         res = run_scenario(ticks)
         self.assertEqual(res.completed_pairs, 0)
@@ -144,26 +144,26 @@ class SimulationScenarios(unittest.TestCase):
 
     def test_3_continuous_fall_no_blind_dca(self):
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
-            (240, MarketQuoteView(0.60, 0.40, 0.59, 0.39, 20, 20, 20, 20)),
-            (230, MarketQuoteView(0.55, 0.76, 0.54, 0.75, 20, 20, 20, 20)),
-            (220, MarketQuoteView(0.50, 0.80, 0.49, 0.79, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
+            (240, MarketQuoteView(0.29, 0.72, 0.28, 0.71, 20, 20, 20, 20)),
+            (230, MarketQuoteView(0.24, 0.76, 0.23, 0.75, 20, 20, 20, 20)),
+            (220, MarketQuoteView(0.19, 0.80, 0.18, 0.79, 20, 20, 20, 20)),
         ]
         res = run_scenario(ticks)
         self.assertLessEqual(res.max_unmatched, 5.0 + 1e-9)
 
     def test_4_down_falls_first(self):
         ticks = [
-            (250, MarketQuoteView(0.32, 0.68, 0.31, 0.67, 20, 20, 20, 20)),
-            (220, MarketQuoteView(0.30, 0.68, 0.29, 0.67, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.70, 0.32, 0.69, 0.31, 20, 20, 20, 20)),
+            (220, MarketQuoteView(0.64, 0.32, 0.63, 0.31, 20, 20, 20, 20)),
         ]
         res = run_scenario(ticks)
         self.assertGreaterEqual(res.completed_pairs, 5)
-        self.assertAlmostEqual(res.avg_pair_cost or 99, 0.98, places=2)
+        self.assertLessEqual(res.avg_pair_cost or 99, 0.98 + 1e-9)
 
     def test_5_rapid_fluctuation(self):
         ticks = [
-            (250, MarketQuoteView(0.31, 0.69, 0.30, 0.68, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.33, 0.68, 0.32, 0.67, 20, 20, 20, 20)),
             (245, MarketQuoteView(0.40, 0.55, 0.39, 0.54, 20, 20, 20, 20)),
             (240, MarketQuoteView(0.28, 0.70, 0.27, 0.69, 20, 20, 20, 20)),
             (235, MarketQuoteView(0.50, 0.48, 0.49, 0.47, 20, 20, 20, 20)),
@@ -174,8 +174,8 @@ class SimulationScenarios(unittest.TestCase):
 
     def test_6_insufficient_liquidity(self):
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
-            (220, MarketQuoteView(0.67, 0.31, 0.66, 0.30, 20, 2, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
+            (220, MarketQuoteView(0.40, 0.60, 0.39, 0.59, 20, 2, 20, 20)),
         ]
         res = run_scenario(ticks)
         # Hedge blocked by depth < min order
@@ -212,7 +212,7 @@ class SimulationScenarios(unittest.TestCase):
 
     def test_9_expiry_with_unmatched_exit(self):
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
             (40, MarketQuoteView(0.20, 0.80, 0.15, 0.79, 20, 20, 20, 20)),
             (30, MarketQuoteView(0.18, 0.82, 0.12, 0.81, 20, 20, 20, 20)),
         ]
@@ -241,7 +241,7 @@ class SimulationScenarios(unittest.TestCase):
     def test_12_fees_make_pair_unprofitable(self):
         cfg = _cfg(fee_rate=0.05, slippage_reserve=0.01)
         ticks = [
-            (250, MarketQuoteView(0.67, 0.33, 0.66, 0.32, 20, 20, 20, 20)),
+            (250, MarketQuoteView(0.34, 0.70, 0.33, 0.69, 20, 20, 20, 20)),
             (220, MarketQuoteView(0.40, 0.60, 0.39, 0.59, 20, 20, 20, 20)),
         ]
         res = run_scenario(ticks, cfg=cfg)

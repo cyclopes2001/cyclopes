@@ -15,10 +15,14 @@ def strategy_label_from_entry(entry_price: float, *, hold_to_settle: bool = True
 def paired_strategy_label(
     target_combined: float = 0.98,
     *,
-    initial_entry_min_c: float = 64.0,
+    initial_entry_max_c: float = 35.0,
+    *,
+    cheaper_side_first: bool = True,
 ) -> str:
     cents = round(float(target_combined) * 100)
-    entry = round(float(initial_entry_min_c))
+    entry = round(float(initial_entry_max_c))
+    if cheaper_side_first:
+        return f"Paired ≤ {cents}¢ · Cheaper first ≤ {entry}¢"
     return f"Paired ≤ {cents}¢ · Expensive first ≥ {entry}¢"
 
 
@@ -73,8 +77,11 @@ def enrich_dashboard_payload(d: Mapping[str, Any]) -> dict[str, Any]:
         target = float(out.get("target_combined_cost_c") or 98) / 100.0
         if out.get("target_combined_cost"):
             target = float(out["target_combined_cost"])
-        init_c = float(out.get("initial_entry_threshold_c") or 64.0)
-        label = paired_strategy_label(target, initial_entry_min_c=init_c)
+        init_c = float(out.get("initial_entry_threshold_c") or 35.0)
+        cheaper = str(out.get("initial_entry_direction") or "CHEAPER_SIDE").upper() != "EXPENSIVE_SIDE"
+        label = paired_strategy_label(
+            target, initial_entry_max_c=init_c, cheaper_side_first=cheaper,
+        )
         out["strategy_name"] = out.get("strategy_name") or label
         out["strategy_label"] = out.get("strategy_label") or label
     else:

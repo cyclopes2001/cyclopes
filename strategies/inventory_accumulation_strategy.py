@@ -59,13 +59,15 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
         ),
         force_exit_eval_seconds=float(getattr(wc, "paired_force_exit_eval_seconds", 45.0)),
     )
-    dir_raw = str(getattr(wc, "paired_initial_entry_direction", "EXPENSIVE_SIDE")).upper()
+    dir_raw = str(getattr(wc, "paired_initial_entry_direction", "CHEAPER_SIDE")).upper()
+    if dir_raw == "CHEAP_SIDE":
+        dir_raw = "CHEAPER_SIDE"
     try:
         entry_dir = InitialEntryDirection(dir_raw)
     except ValueError:
-        entry_dir = InitialEntryDirection.EXPENSIVE_SIDE
+        entry_dir = InitialEntryDirection.CHEAPER_SIDE
     return PairedStrategyConfig(
-        initial_entry_threshold=float(getattr(wc, "paired_initial_entry_threshold", 0.64)),
+        initial_entry_threshold=float(getattr(wc, "paired_initial_entry_threshold", 0.35)),
         initial_entry_direction=entry_dir,
         target_combined_cost=float(
             getattr(wc, "target_combined_pair_cost", getattr(wc, "inventory_max_pair_cost", 0.98))
@@ -294,7 +296,8 @@ class InventoryAccumulationStrategy:
         worker.dashboard["strategy_name"] = "Paired Inventory Accumulation"
         worker.dashboard["strategy_label"] = paired_strategy_label(
             cfg.target_combined_cost,
-            initial_entry_min_c=cfg.initial_entry_threshold * 100,
+            initial_entry_max_c=cfg.initial_entry_threshold * 100,
+            cheaper_side_first=cfg.initial_entry_direction == InitialEntryDirection.CHEAPER_SIDE,
         )
         worker.dashboard["execution_type"] = "FOK"
         worker.dashboard["paired"] = paired
@@ -337,7 +340,7 @@ class InventoryAccumulationStrategy:
         worker.dashboard["initial_entry_rule"] = (
             f"EXPENSIVE SIDE FIRST ≥ {cfg.initial_entry_threshold * 100:.0f}¢"
             if cfg.initial_entry_direction == InitialEntryDirection.EXPENSIVE_SIDE
-            else f"CHEAP SIDE FIRST ≤ {cfg.initial_entry_threshold * 100:.0f}¢"
+            else f"CHEAPER SIDE FIRST ≤ {cfg.initial_entry_threshold * 100:.0f}¢"
         )
         worker.dashboard["dry_run"] = bool(worker.is_dry_run())
         worker.dashboard["live_trading_enabled"] = bool(cfg.live_trading_enabled)

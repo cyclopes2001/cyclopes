@@ -202,6 +202,7 @@ class WorkerConfig:
     velocity_engine_enabled: bool = True
     velocity_entry_enabled: bool = True
     velocity_initial_entry_override_enabled: bool = False
+    velocity_initial_entry_max_price: float = 0.50
     velocity_paper_mode: bool = True
     velocity_windows_seconds: tuple = (1.0, 3.0, 5.0, 10.0)
     velocity_min_confidence: float = 75.0
@@ -630,6 +631,17 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         "velocity_initial_entry_override_enabled",
         _cfg_get(raw, defaults, "velocity_initial_entry_override_enabled", default=False),
         False,
+    )
+    velocity_initial_entry_max_price = _parse_unit_fraction(
+        "velocity_initial_entry_max_price",
+        _cfg_get(
+            raw,
+            defaults,
+            "velocity_initial_entry_max_price",
+            "velocity_entry_max_price",
+            default=0.50,
+        ),
+        0.50,
     )
     velocity_paper_mode = _parse_bool_value(
         "velocity_paper_mode",
@@ -1474,6 +1486,7 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         velocity_engine_enabled=velocity_engine_enabled,
         velocity_entry_enabled=velocity_entry_enabled,
         velocity_initial_entry_override_enabled=velocity_initial_entry_override_enabled,
+        velocity_initial_entry_max_price=velocity_initial_entry_max_price,
         velocity_paper_mode=velocity_paper_mode,
         velocity_windows_seconds=velocity_windows_seconds,
         velocity_min_confidence=velocity_min_confidence,

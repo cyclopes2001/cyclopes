@@ -958,6 +958,8 @@ class InventoryAccumulationStrategy:
             seconds_left=seconds_left,
             velocity=vel_ctx,
             apply_velocity_entry=apply_velocity,
+            velocity_initial_override=vcfg.initial_entry_override_enabled,
+            velocity_initial_max_price=vcfg.initial_entry_max_price,
         )
         action = self._paper_block_velocity_live(worker, action, apply_velocity=apply_velocity)
         if vel_snap and vcfg.paper_mode:

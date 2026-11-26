@@ -179,6 +179,87 @@ class DecisionIntegrationTests(unittest.TestCase):
             initial_entry_direction=InitialEntryDirection.CHEAPER_SIDE,
         )
 
+    def test_velocity_only_entry_above_35c_cap(self):
+        from utils.velocity_engine.models import SideMetrics, VelocityContext, VelocityTradeDecision
+
+        ledger = PairedInventoryLedger()
+        quotes = MarketQuoteView(
+            yes_ask=0.30,
+            no_ask=0.40,
+            yes_bid=0.29,
+            no_bid=0.39,
+            yes_ask_size=50,
+            no_ask_size=50,
+            yes_bid_size=50,
+            no_bid_size=50,
+        )
+        ctx = VelocityContext(
+            enabled=True,
+            valid=True,
+            stale=False,
+            confidence=80,
+            preferred_side="NO",
+            decision=VelocityTradeDecision.BUY_DOWN,
+            avoid_buy_sides=("YES",),
+            up=SideMetrics(state=VelocitySignalState.FALLING_FAST),
+            down=SideMetrics(state=VelocitySignalState.STABILIZING),
+        )
+        act = evaluate_initial_entry(
+            ledger,
+            quotes,
+            self._cfg(),
+            phase=__import__("utils.market_time_phases", fromlist=["MarketPhase"]).MarketPhase.EARLY,
+            seconds_left=240.0,
+            velocity=ctx,
+            apply_velocity_entry=True,
+            velocity_initial_override=True,
+            velocity_initial_max_price=0.50,
+        )
+        self.assertIsNotNone(act)
+        assert act
+        self.assertEqual(act.kind, ActionKind.BUY_ENTRY)
+        self.assertEqual(act.side, "NO")
+        self.assertIn("VELOCITY INITIAL ENTRY", act.reason)
+
+    def test_velocity_only_no_cheaper_fallback_when_wait(self):
+        from utils.velocity_engine.models import SideMetrics, VelocityContext, VelocityTradeDecision
+
+        ledger = PairedInventoryLedger()
+        quotes = MarketQuoteView(
+            yes_ask=0.30,
+            no_ask=0.31,
+            yes_bid=0.29,
+            no_bid=0.30,
+            yes_ask_size=50,
+            no_ask_size=50,
+            yes_bid_size=50,
+            no_bid_size=50,
+        )
+        ctx = VelocityContext(
+            enabled=True,
+            valid=True,
+            stale=False,
+            confidence=80,
+            preferred_side=None,
+            decision=VelocityTradeDecision.WAIT,
+            up=SideMetrics(),
+            down=SideMetrics(),
+        )
+        act = evaluate_initial_entry(
+            ledger,
+            quotes,
+            self._cfg(),
+            phase=__import__("utils.market_time_phases", fromlist=["MarketPhase"]).MarketPhase.EARLY,
+            seconds_left=240.0,
+            velocity=ctx,
+            apply_velocity_entry=True,
+            velocity_initial_override=True,
+            velocity_initial_max_price=0.50,
+        )
+        assert act
+        self.assertEqual(act.kind, ActionKind.WAIT)
+        self.assertNotEqual(act.side, "YES")
+
     def test_velocity_prefers_down_over_cheaper_up(self):
         from utils.velocity_engine.models import SideMetrics, VelocityContext, VelocityTradeDecision
 

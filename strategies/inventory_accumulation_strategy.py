@@ -948,9 +948,7 @@ class InventoryAccumulationStrategy:
         vel_snap = self._update_velocity(worker)
         vcfg = load_velocity_config(worker.worker_config)
         vel_ctx = vel_snap.context if vel_snap else None
-        apply_velocity = bool(
-            vel_snap and vcfg.engine_enabled and vcfg.entry_enabled
-        )
+        apply_velocity = bool(vcfg.engine_enabled and vcfg.entry_enabled)
         action = decide(
             ledger,
             quotes,

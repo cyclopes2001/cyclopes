@@ -238,20 +238,30 @@ def evaluate_hedge(
     return rejects[0] if rejects else None
 
 
+def _velocity_trade_side(velocity: "VelocityContext") -> Optional[str]:
+    if velocity.preferred_side:
+        return velocity.preferred_side
+    if VelocityTradeDecision is None:
+        return None
+    if velocity.decision == VelocityTradeDecision.BUY_UP:
+        return "YES"
+    if velocity.decision == VelocityTradeDecision.BUY_DOWN:
+        return "NO"
+    return None
+
+
 def _velocity_only_initial_entry_active(
     *,
     apply_velocity_entry: bool,
     velocity_initial_override: bool,
     velocity: Optional["VelocityContext"],
 ) -> bool:
-    return bool(
-        apply_velocity_entry
-        and velocity_initial_override
-        and velocity is not None
-        and velocity.enabled
-        and velocity.valid
-        and not velocity.stale
-    )
+    """Override mode: prefer side when engine has a target and book is fresh (no full valid gate)."""
+    if not (apply_velocity_entry and velocity_initial_override and velocity is not None and velocity.enabled):
+        return False
+    if velocity.stale:
+        return False
+    return _velocity_trade_side(velocity) is not None
 
 
 def _evaluate_velocity_only_initial_entry(
@@ -265,7 +275,8 @@ def _evaluate_velocity_only_initial_entry(
 ) -> StrategyAction:
     """Velocity-only first leg: preferred side, no cheaper-side fallback, optional >35¢ cap."""
     max_px = float(velocity_initial_max_price)
-    if VelocityTradeDecision is not None and velocity.decision == VelocityTradeDecision.WAIT:
+    side = _velocity_trade_side(velocity)
+    if VelocityTradeDecision is not None and velocity.decision == VelocityTradeDecision.WAIT and not side:
         return StrategyAction(
             kind=ActionKind.WAIT,
             side=None,
@@ -277,7 +288,6 @@ def _evaluate_velocity_only_initial_entry(
             ),
             phase=phase,
         )
-    side = velocity.preferred_side
     if not side:
         return StrategyAction(
             kind=ActionKind.WAIT,
@@ -439,19 +449,43 @@ def evaluate_initial_entry(
     if ledger.unmatched_shares("YES") > _EPS or ledger.unmatched_shares("NO") > _EPS:
         return None  # hedge / DCA path owns unmatched inventory
 
-    if _velocity_only_initial_entry_active(
-        apply_velocity_entry=apply_velocity_entry,
-        velocity_initial_override=velocity_initial_override,
-        velocity=velocity,
-    ):
-        assert velocity is not None
-        return _evaluate_velocity_only_initial_entry(
-            ledger,
-            quotes,
-            cfg,
-            phase=phase,
+    velocity_only_mode = bool(apply_velocity_entry and velocity_initial_override)
+
+    if velocity_only_mode:
+        if velocity is None or not velocity.enabled:
+            return StrategyAction(
+                kind=ActionKind.WAIT,
+                side=None,
+                qty=0.0,
+                limit_price=0.0,
+                reason="WAIT: velocity-only initial entry — engine unavailable",
+                phase=phase,
+            )
+        if _velocity_only_initial_entry_active(
+            apply_velocity_entry=apply_velocity_entry,
+            velocity_initial_override=velocity_initial_override,
             velocity=velocity,
-            velocity_initial_max_price=velocity_initial_max_price,
+        ):
+            return _evaluate_velocity_only_initial_entry(
+                ledger,
+                quotes,
+                cfg,
+                phase=phase,
+                velocity=velocity,
+                velocity_initial_max_price=velocity_initial_max_price,
+            )
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason=(
+                "WAIT: velocity-only initial entry — signal not ready "
+                f"(stale={velocity.stale}, conf={velocity.confidence:.0f}, "
+                f"decision={getattr(velocity.decision, 'value', velocity.decision)}, "
+                f"pref={_side_label(_velocity_trade_side(velocity) or '') or '—'})"
+            ),
+            phase=phase,
         )
 
     candidates = []

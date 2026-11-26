@@ -779,6 +779,9 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     .pair-leg.AVAILABLE { opacity: .85; }
     .pair-leg.CANCELLED, .pair-leg.REJECTED { border-color: rgba(113,113,122,.8); opacity: .7; }
     .pair-econ-green { color: #4ade80; }
+    .pair-pnl-pos { color: var(--accent-muted); font-weight: 700; }
+    .pair-pnl-neg { color: #ef4444; font-weight: 700; }
+    .pair-pnl-neu { color: #a1a1aa; font-weight: 600; }
     .pair-econ-amber { color: #fbbf24; }
     .pair-econ-red { color: #f87171; }
     .pair-feed { max-height: 140px; overflow-y: auto; font-size: 10px; color: #d4d4d8; }
@@ -2481,73 +2484,64 @@ function _renderOutcomeStamp(bot) {
   return `<div class="${cls}" aria-hidden="true"><span class="stamp-head">${stamp}</span>${detailHtml}${pnlLine}</div>`;
 }
 
-function _pairLegClass(st){const u=String(st||'AVAILABLE').toUpperCase();return u.replace(/\s+/g,'_');}
 function _econClass(st){return st==='green'?'pair-econ-green':st==='amber'?'pair-econ-amber':st==='red'?'pair-econ-red':'text-zinc-300';}
-function _fmtTs(ts){if(!ts)return '—';try{return new Date(ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){return '—';}}
-function _renderPairBlocks(blocks,label){
-  const rows=(blocks||[]).map(b=>`<span class="pair-block ${b.kind}">${b.label}</span>`).join('');
-  return `<div class="text-[10px] text-zinc-500 mb-1">${label}</div><div>${rows||'<span class="pair-block EMPTY">—</span>'}</div>`;
-}
-function _renderDcaLegs(legs,sideLabel){
-  return (legs||[]).map(leg=>`<div class="pair-leg ${_pairLegClass(leg.status)}">
-    <div class="flex justify-between"><span class="font-bold">LEG ${leg.leg}</span><span>${leg.fill_ratio}</span></div>
-    <div>${sideLabel} · ${leg.status}</div>
-    <div>Entry: ${leg.avg_fill_c?leg.avg_fill_c.toFixed(1)+'¢':'—'} · Spent: $${_fmtMoney(leg.spent_usd||0)}</div>
-    <div class="text-zinc-500">${leg.order_id?('#'+String(leg.order_id).slice(0,8)):''} ${_fmtTs(leg.timestamp)}</div>
-  </div>`).join('');
-}
 function _renderPairedTerminalCard(bot){
   const p=bot.paired||{};
   const pos=p.positions||{};
   const econ=p.economics||{};
   const ui=p.strategy_ui||{};
   const label=`${bot.asset||'BOT'} ${bot.window||'5m'}`.trim();
-  const marketId=(bot.market_id||'').slice(0,14);
+  const marketWindow=formatMarketWindow(bot.market_start_iso,bot.market_end_iso);
   const yesAskC=Number(bot.yes_ask_c||bot.yes||0);
   const noAskC=Number(bot.no_ask_c||bot.no||0);
   const expiryUrgent=(Number(bot.seconds_left)||999)<=90;
-  const unmatchedNote=econ.note_unhedged_not_guaranteed?'<div class="text-[10px] text-amber-400/90 mt-1">Unmatched inventory is not guaranteed profit.</div>':'';
-  const history=(p.execution_history||[]).slice().reverse().map(ev=>{
-    const cat=ev.category||'all';
-    return `<div class="pair-feed-row" data-cat="${cat}"><span class="text-zinc-500">${_fmtTs(ev.timestamp)}</span> ${ev.explanation||ev.event_type||''}</div>`;
-  }).join('');
-  const decisions=(p.decision_feed||[]).slice(0,12).map(d=>
-    `<div class="pair-feed-row"><span class="text-zinc-500">${_fmtTs(d.timestamp)}</span> ${d.message||''}</div>`
-  ).join('');
+  const upLine=pos.up?.line||'0 UP @ $0.00';
+  const downLine=pos.down?.line||'0 DOWN @ $0.00';
+  const positionsOneLine=`<span class="pair-up">${upLine}</span><span class="text-zinc-600 mx-1.5">·</span><span class="pair-down">${downLine}</span>`;
+  const upAvg=Number(pos.up?.avg_entry_c||bot.yes_avg_price_c||0);
+  const downAvg=Number(pos.down?.avg_entry_c||bot.no_avg_price_c||0);
+  const combinedC=Number(econ.combined_pair_cost_c||bot.combined_pair_cost_c||0);
+  const targetC=Number(econ.target_combined_c||bot.target_combined_cost_c||98);
+  const hasMatched=combinedC>0&&(Number(pos.up?.shares||0)>0&&Number(pos.down?.shares||0)>0);
+  const combinedLine=hasMatched
+    ? `Combined <span class="font-bold">${combinedC.toFixed(1)}¢</span> / ${targetC.toFixed(0)}¢`
+    : `Combined target ≤ ${targetC.toFixed(0)}¢`;
+  const avgEntryLine=(upAvg>0||downAvg>0)
+    ? `Avg entry <span class="pair-up">${upAvg>0?upAvg.toFixed(1)+'¢':'—'}</span> + <span class="pair-down">${downAvg>0?downAvg.toFixed(1)+'¢':'—'}</span>${hasMatched?` = <span class="font-bold text-zinc-100">${combinedC.toFixed(1)}¢</span>`:''}`
+    : 'Avg entry —';
+  const marketPnl=Number(bot.pnl_dollars??bot.unrealized_pnl??0);
+  const pnlCls=marketPnl>0?'pair-pnl-pos':marketPnl<0?'pair-pnl-neg':'pair-pnl-neu';
+  const pnlLine=_balanceVisible
+    ? `${marketPnl>=0?'+':''}$${_fmtMoney(Math.abs(marketPnl))}`
+    : _maskUsd();
+  const econStatusCls=_econClass(econ.economics_status);
   return `<div class="rounded-2xl bot-card-body pair-terminal">
     ${_renderOutcomeStamp(bot)}
-    <div class="flex items-start justify-between gap-3 mb-3">
-      <div>
+    <div class="flex items-start justify-between gap-3 mb-2">
+      <div class="min-w-0 flex-1">
         <div class="text-xl font-black tracking-tight text-zinc-50">${label} <span class="text-zinc-500 text-sm font-mono">UP/DOWN</span></div>
-        <div class="text-[10px] font-mono text-zinc-500 mt-1">ID ${marketId||'—'}… · ${bot.strategy_label||'Paired'}</div>
+        <div class="text-[11px] text-zinc-400 font-mono mt-1.5 leading-snug" title="Market window (ET)">${marketWindow}</div>
         <div class="mt-2"><span class="pair-state">${ui.state||bot.strategy_ui_state||'SCANNING'}</span></div>
       </div>
-      <div class="text-right">
+      <div class="text-right flex-shrink-0">
         <div class="pair-expiry ${expiryUrgent?'text-amber-400':''}" data-market-countdown="${bot.market_end_iso||''}">${bot.timer||'--:--'}</div>
         <div class="text-[10px] text-zinc-500 uppercase tracking-wider">expires · ${ui.phase||bot.market_phase||'—'}</div>
-        <div class="text-[10px] text-zinc-500 mt-1">${ui.allow_new_accumulation?'Accumulation ON':'Accumulation paused'}</div>
       </div>
     </div>
     <div class="flex gap-2 mb-3">
       <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">UP ask</div><div class="text-lg font-bold pair-up">${yesAskC?yesAskC.toFixed(1)+'¢':'—'}</div></div>
       <div class="flex-1 pair-panel text-center"><div class="text-[10px] text-zinc-500 mb-1">DOWN ask</div><div class="text-lg font-bold pair-down">${noAskC?noAskC.toFixed(1)+'¢':'—'}</div></div>
     </div>
-    <div class="pair-panel mb-3 border-emerald-900/40">
-      <div class="pair-panel-title">Positions (total acquisition cost)</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div><div class="pair-pos-line pair-up">${pos.up?.line||'0 UP @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.up?.avg_entry_c||0).toFixed(1)}¢</div></div>
-        <div><div class="pair-pos-line pair-down">${pos.down?.line||'0 DOWN @ $0.00'}</div><div class="pair-pos-sub">Average entry: ${Number(pos.down?.avg_entry_c||0).toFixed(1)}¢</div></div>
+    <div class="pair-panel mb-2 px-3 py-2.5">
+      <div class="text-sm font-semibold text-zinc-100 whitespace-normal break-words leading-snug">${positionsOneLine}</div>
+    </div>
+    <div class="pair-panel mb-3 px-3 py-2.5 ${econStatusCls}">
+      <div class="text-sm leading-relaxed">
+        <div class="block text-zinc-300">${combinedLine}</div>
+        <div class="block text-zinc-400 mt-0.5">${avgEntryLine}</div>
+        <div class="block text-zinc-300 mt-1.5">Market P&L <span class="${pnlCls}">${pnlLine}</span></div>
       </div>
     </div>
-    <div class="pair-panel mb-3">
-      <div class="pair-panel-title">Combined economics (matched pairs only)</div>
-      <div class="text-xs ${_econClass(econ.economics_status)}">UP avg ${Number(econ.up_avg_c||0).toFixed(1)}¢ + DOWN avg ${Number(econ.down_avg_c||0).toFixed(1)}¢ = <span class="font-bold">${Number(econ.combined_pair_cost_c||0).toFixed(1)}¢</span> / target ${Number(econ.target_combined_c||98).toFixed(0)}¢</div>
-      <div class="text-[11px] text-zinc-400 mt-1">Completed pairs: ${Number(econ.completed_pairs||0)} · Gross/pair ${econ.gross_profit_per_pair_c!=null?Number(econ.gross_profit_per_pair_c).toFixed(1)+'¢':'—'} · Net/pair ${econ.net_profit_per_pair_c!=null?Number(econ.net_profit_per_pair_c).toFixed(1)+'¢':'—'}</div>
-      <div class="text-[11px] text-zinc-500 mt-1">Realized P&L $${_fmtMoney(econ.realized_pnl_usd||0)} · Unrealized (marks) $${_fmtMoney(bot.unrealized_pnl||0)}</div>
-      ${unmatchedNote}
-    </div>
-    <details class="pair-details"><summary>Execution history</summary><div class="pair-feed" data-feed="history">${history||'<div class="text-zinc-600">No fills yet.</div>'}</div></details>
-    <details class="pair-details"><summary>Decision log</summary><div class="pair-feed">${decisions||'<div class="text-zinc-600">—</div>'}</div></details>
     <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">
       <span>${bot.dry_run?'PAPER':'LIVE'} · FOK ${Number(bot.order_size||5)} sh</span>
       <span>Cum. $${_fmtMoney(bot.cumulative_pnl||0)}</span>

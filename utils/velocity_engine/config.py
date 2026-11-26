@@ -15,7 +15,7 @@ class VelocityEngineConfig:
     engine_enabled: bool = True
     entry_enabled: bool = True
     initial_entry_override_enabled: bool = False
-    initial_entry_max_price: float = 0.50
+    initial_entry_max_price: float = 0.90
     paper_mode: bool = True
     windows_seconds: Tuple[float, ...] = _DEFAULT_WINDOWS
     min_confidence: float = 75.0
@@ -93,7 +93,7 @@ def load_velocity_config(wc: Any) -> VelocityEngineConfig:
             _get("velocity_initial_entry_override_enabled", False), False
         ),
         initial_entry_max_price=_as_float(
-            _get("velocity_initial_entry_max_price", 0.50), 0.50,
+            _get("velocity_initial_entry_max_price", 0.90), 0.90,
         ),
         paper_mode=_as_bool(_get("velocity_paper_mode", True), True),
         windows_seconds=_windows(_get("velocity_windows_seconds")),

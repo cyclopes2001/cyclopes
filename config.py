@@ -202,7 +202,7 @@ class WorkerConfig:
     velocity_engine_enabled: bool = True
     velocity_entry_enabled: bool = True
     velocity_initial_entry_override_enabled: bool = False
-    velocity_initial_entry_max_price: float = 0.50
+    velocity_initial_entry_max_price: float = 0.90
     velocity_paper_mode: bool = True
     velocity_windows_seconds: tuple = (1.0, 3.0, 5.0, 10.0)
     velocity_min_confidence: float = 75.0
@@ -639,9 +639,9 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
             defaults,
             "velocity_initial_entry_max_price",
             "velocity_entry_max_price",
-            default=0.50,
+            default=0.90,
         ),
-        0.50,
+        0.90,
     )
     velocity_paper_mode = _parse_bool_value(
         "velocity_paper_mode",

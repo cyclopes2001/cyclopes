@@ -87,6 +87,7 @@ class PairedStrategyConfig:
     min_orderbook_depth: float = 5.0
     phase_policy: PhasePolicy = PhasePolicy()
     exit_max_loss_fraction: float = 0.35
+    hedge_timeout_seconds: float = 20.0
     live_trading_enabled: bool = False
 
 
@@ -817,6 +818,82 @@ def evaluate_dca_action(
     )
 
 
+def evaluate_hedge_timeout_exit(
+    ledger: PairedInventoryLedger,
+    quotes: MarketQuoteView,
+    cfg: PairedStrategyConfig,
+    *,
+    phase: MarketPhase,
+    unmatched_since_mono: Optional[float],
+    now_mono: float,
+    hedge_locked: bool,
+) -> Optional[StrategyAction]:
+    """Sell unmatched inventory if no hedge lock within ``hedge_timeout_seconds``."""
+    if hedge_locked or cfg.hedge_timeout_seconds <= 0:
+        return None
+    if unmatched_since_mono is None:
+        return None
+    elapsed = float(now_mono) - float(unmatched_since_mono)
+    if elapsed + _EPS < float(cfg.hedge_timeout_seconds):
+        return None
+
+    unmatched_yes = ledger.unmatched_shares("YES")
+    unmatched_no = ledger.unmatched_shares("NO")
+    if unmatched_yes <= _EPS and unmatched_no <= _EPS:
+        return None
+
+    side = "YES" if unmatched_yes > _EPS else "NO"
+    qty = unmatched_yes if side == "YES" else unmatched_no
+    bid = quotes.yes_bid if side == "YES" else quotes.no_bid
+    depth = quotes.yes_bid_size if side == "YES" else quotes.no_bid_size
+    max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
+    avg = ledger.unmatched_average_cost(side)
+
+    if bid <= 0:
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=side,
+            qty=0.0,
+            limit_price=0.0,
+            reason=(
+                f"WAIT: hedge timeout ({elapsed:.0f}s) — no bid to exit {_side_label(side)}"
+            ),
+            phase=phase,
+            max_hedge_up=max_up,
+            max_hedge_down=max_down,
+        )
+    exit_qty = min(qty, depth)
+    if exit_qty + _EPS < cfg.min_order_size:
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=side,
+            qty=0.0,
+            limit_price=bid,
+            reason=(
+                f"WAIT: hedge timeout — bid depth {depth:.1f} insufficient to sell "
+                f"{qty:.1f} {_side_label(side)}"
+            ),
+            phase=phase,
+            max_hedge_up=max_up,
+            max_hedge_down=max_down,
+        )
+
+    return StrategyAction(
+        kind=ActionKind.EXIT,
+        side=side,
+        qty=exit_qty,
+        limit_price=bid,
+        reason=(
+            f"HEDGE TIMEOUT EXIT {_side_label(side)}: no locked hedge within "
+            f"{cfg.hedge_timeout_seconds:.0f}s (waited {elapsed:.1f}s, "
+            f"avg {avg * 100:.1f}¢ → bid {bid * 100:.1f}¢)"
+        ),
+        phase=phase,
+        max_hedge_up=max_up,
+        max_hedge_down=max_down,
+    )
+
+
 def evaluate_exit(
     ledger: PairedInventoryLedger,
     quotes: MarketQuoteView,
@@ -924,9 +1001,13 @@ def decide(
     apply_velocity_entry: bool = False,
     velocity_initial_override: bool = False,
     velocity_initial_max_price: float = 0.50,
+    hedge_timeout_since_mono: Optional[float] = None,
+    hedge_locked: bool = False,
+    now_mono: Optional[float] = None,
 ) -> StrategyAction:
     phase = resolve_phase(seconds_left, cfg.phase_policy)
     max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
+    mono_now = float(now_mono if now_mono is not None else 0.0)
 
     if phase == MarketPhase.CLOSED:
         return StrategyAction(
@@ -940,19 +1021,33 @@ def decide(
             max_hedge_down=max_down,
         )
 
-    # 1) Always prioritize a valid hedge when possible.
+      # 1) Always prioritize a valid hedge when possible.
     hedge = evaluate_hedge(ledger, quotes, cfg, phase=phase)
     if hedge and hedge.kind == ActionKind.BUY_HEDGE:
         return hedge
 
-    # 2) Late / final risk: exit evaluation before new risk.
+    # 2) Unmatched hedge clock — exit if no locked hedge within timeout.
+    if mono_now > 0:
+        timeout_exit = evaluate_hedge_timeout_exit(
+            ledger,
+            quotes,
+            cfg,
+            phase=phase,
+            unmatched_since_mono=hedge_timeout_since_mono,
+            now_mono=mono_now,
+            hedge_locked=hedge_locked,
+        )
+        if timeout_exit and timeout_exit.kind == ActionKind.EXIT:
+            return timeout_exit
+
+    # 3) Late / final risk: exit evaluation before new risk.
     risk_cutoff = min(cfg.phase_policy.force_exit_eval_seconds, cfg.phase_policy.final_risk_seconds)
     if phase == MarketPhase.LATE or seconds_left <= risk_cutoff:
         exit_act = evaluate_exit(ledger, quotes, cfg, phase=phase, seconds_left=seconds_left)
         if exit_act and exit_act.kind == ActionKind.EXIT:
             return exit_act
 
-    # 3) Adaptive DCA on heavy side (only if unmatched exists).
+    # 4) Adaptive DCA on heavy side (only if unmatched exists).
     dca = evaluate_dca_action(
         ledger,
         quotes,
@@ -965,7 +1060,7 @@ def decide(
     if dca and dca.kind == ActionKind.BUY_DCA:
         return dca
 
-    # 4) Initial entry when flat / matched-only.
+    # 5) Initial entry when flat / matched-only.
     entry = evaluate_initial_entry(
         ledger,
         quotes,

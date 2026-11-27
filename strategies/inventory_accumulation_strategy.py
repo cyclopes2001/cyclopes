@@ -33,6 +33,7 @@ from utils.market_time_phases import allow_new_accumulation as phase_allows_new_
 from utils.velocity_engine import OrderBookVelocityEngine, load_velocity_config
 from utils.velocity_engine.entry_selection import classify_proposed_order
 from utils.velocity_engine.paper import VelocityPaperJournal
+from utils.stopped_out_store import stopped_out_store
 
 if TYPE_CHECKING:
     from bot import MarketWorker
@@ -115,6 +116,7 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
         phase_policy=policy,
         exit_max_loss_fraction=float(getattr(wc, "paired_exit_max_loss_fraction", 0.35)),
         live_trading_enabled=bool(getattr(wc, "paired_live_trading_enabled", False)),
+        hedge_timeout_seconds=float(getattr(wc, "paired_hedge_timeout_seconds", 20.0)),
     )
 
 
@@ -129,6 +131,7 @@ class InventoryAccumulationStrategy:
         self._decision_feed: dict[str, list] = {}
         self._velocity_engines: dict[str, OrderBookVelocityEngine] = {}
         self._velocity_paper: dict[str, VelocityPaperJournal] = {}
+        self._hedge_clocks: dict[str, dict] = {}
 
     def _key(self, worker: "MarketWorker") -> str:
         return worker.worker_config.key
@@ -146,6 +149,7 @@ class InventoryAccumulationStrategy:
             vel = self._velocity_engines.get(key)
             if vel is not None:
                 vel.reset(cid)
+            self._hedge_clocks.pop(key, None)
             worker.dashboard["paired_initial_entry_fills"] = 0
             worker.dashboard["paired_dca_fills"] = 0
             worker.dashboard["paired_hedge_fills"] = 0
@@ -380,8 +384,11 @@ class InventoryAccumulationStrategy:
     def _quotes(self, worker: "MarketWorker") -> MarketQuoteView:
         worker.refresh_order_book("YES")
         worker.refresh_order_book("NO")
-        yes_exe = worker.executable_buy("YES", float(worker.worker_config.min_order_size))
-        no_exe = worker.executable_buy("NO", float(worker.worker_config.min_order_size))
+        size = float(worker.worker_config.min_order_size)
+        yes_exe = worker.executable_buy("YES", size)
+        no_exe = worker.executable_buy("NO", size)
+        yes_bid_exe = worker.executable_sell("YES", size)
+        no_bid_exe = worker.executable_sell("NO", size)
         return MarketQuoteView(
             yes_ask=float(worker.best_ask("YES")),
             no_ask=float(worker.best_ask("NO")),
@@ -389,9 +396,55 @@ class InventoryAccumulationStrategy:
             no_bid=float(worker.best_bid("NO")),
             yes_ask_size=float(yes_exe[1]) if yes_exe else float(worker.best_ask_size("YES")),
             no_ask_size=float(no_exe[1]) if no_exe else float(worker.best_ask_size("NO")),
-            yes_bid_size=float(worker.best_ask_size("YES")),  # best available proxy
-            no_bid_size=float(worker.best_ask_size("NO")),
+            yes_bid_size=float(yes_bid_exe[1]) if yes_bid_exe else 0.0,
+            no_bid_size=float(no_bid_exe[1]) if no_bid_exe else 0.0,
         )
+
+    def _hedge_locked(self, worker: "MarketWorker", ledger: PairedInventoryLedger) -> bool:
+        m = ledger.metrics()
+        if m.up_unmatched_shares <= _EPS and m.down_unmatched_shares <= _EPS:
+            return True
+        pending = worker.dashboard.get("paired_pending_order") or {}
+        if str(pending.get("purpose") or "") == "paired_hedge":
+            return True
+        if worker.order_state.name == "PENDING":
+            pend = worker.dashboard.get("paired_pending_order") or {}
+            if str(pend.get("purpose") or "") == "paired_hedge":
+                return True
+        return False
+
+    def _hedge_timeout_since_mono(
+        self, worker: "MarketWorker", ledger: PairedInventoryLedger, cfg: PairedStrategyConfig,
+    ) -> Optional[float]:
+        key = self._key(worker)
+        cid = worker.canonical_market_id() or ""
+        m = ledger.metrics()
+        um = max(m.up_unmatched_shares, m.down_unmatched_shares)
+        clk = self._hedge_clocks.get(key)
+        if clk and clk.get("market_id") != cid:
+            clk = None
+            self._hedge_clocks.pop(key, None)
+        if um <= _EPS:
+            self._hedge_clocks[key] = {"market_id": cid, "since": None}
+            worker.dashboard["hedge_timeout_seconds_left"] = None
+            return None
+        if self._hedge_locked(worker, ledger):
+            if clk is None:
+                clk = {"market_id": cid, "since": time.monotonic()}
+                self._hedge_clocks[key] = clk
+            else:
+                clk["since"] = time.monotonic()
+            worker.dashboard["hedge_timeout_seconds_left"] = float(cfg.hedge_timeout_seconds)
+            return None
+        if clk is None or clk.get("since") is None:
+            clk = {"market_id": cid, "since": time.monotonic()}
+            self._hedge_clocks[key] = clk
+        since = float(clk["since"])
+        elapsed = time.monotonic() - since
+        worker.dashboard["hedge_timeout_seconds_left"] = max(
+            0.0, float(cfg.hedge_timeout_seconds) - elapsed,
+        )
+        return since
 
     def _sync_worker_inventory(self, worker: "MarketWorker", ledger: PairedInventoryLedger) -> None:
         """Keep PositionInventory aligned with the pairing ledger (restart-safe rebuild)."""
@@ -876,13 +929,42 @@ class InventoryAccumulationStrategy:
                     oid, side, qty, px,
                 ):
                     return
+                hedge_timeout = "HEDGE TIMEOUT" in (action.reason or "").upper()
+                entry_avg = ledger.unmatched_average_cost(side)
+                if entry_avg <= _EPS:
+                    m_pre = ledger.metrics()
+                    entry_avg = (
+                        m_pre.up_average_cost if side == "YES" else m_pre.down_average_cost
+                    )
                 fee = qty * px * cfg.fee_rate
                 pnl = ledger.record_sell(side, qty, px, fees=fee)
                 self._sync_worker_inventory(worker, ledger)
                 self._persist_ledger(key, ledger)
                 worker.log_trade(side, px, "SELL", size=qty, order_id=oid)
+                if hedge_timeout:
+                    cid = worker.canonical_market_id() or ""
+                    if cid:
+                        stopped_out_store.mark_stopped_out(key, cid)
+                    worker.dashboard["market_stopped_out"] = True
+                    worker.dashboard["entry_block_reason"] = "hedge_timeout_closed"
+                    self._hedge_clocks.pop(key, None)
+                    side_label = "Up" if side == "YES" else "Down"
+                    stamp = "TAKE PROFIT" if pnl >= -1e-6 else "STOP LOSS"
+                    buy_usd = round(float(qty) * float(entry_avg), 2)
+                    sell_usd = round(float(qty) * float(px), 2)
+                    worker.dashboard["market_outcome_stamp"] = stamp
+                    worker.dashboard["market_outcome_stamp_pnl"] = round(pnl, 4)
+                    worker.dashboard["market_outcome_stamp_buy_line"] = (
+                        f"Bought ${buy_usd:.2f} {side_label} at {entry_avg * 100:.1f}c"
+                    )
+                    worker.dashboard["market_outcome_stamp_sell_line"] = (
+                        f"Sold ${sell_usd:.2f} {side_label} at {px * 100:.1f}c (hedge timeout)"
+                    )
+                    outcome_type = "HEDGE_TIMEOUT_TP" if pnl >= -1e-6 else "HEDGE_TIMEOUT_SL"
+                else:
+                    outcome_type = "PAIRED_EXIT"
                 worker.log_pnl(
-                    "PAIRED_EXIT",
+                    outcome_type,
                     round(pnl, 4),
                     {"side": side, "qty": qty, "price": px, "market_id": worker.canonical_market_id()},
                 )
@@ -914,6 +996,7 @@ class InventoryAccumulationStrategy:
             )
             return
         if kind == ActionKind.BUY_HEDGE and m.up_unmatched_shares <= _EPS and m.down_unmatched_shares <= _EPS:
+            self._hedge_clocks.pop(self._key(worker), None)
             rec.phase = AccumulationPhase.PAIR_COMPLETED
             rec.initial_hedge_complete = True
             rec.target_achieved = bool(
@@ -943,12 +1026,26 @@ class InventoryAccumulationStrategy:
             )
             return
 
+        cid = worker.canonical_market_id() or ""
+        wkey = self._key(worker)
+        if stopped_out_store.is_stopped_out(wkey, cid):
+            worker.dashboard["market_stopped_out"] = True
+            worker.dashboard["entry_block_reason"] = worker.dashboard.get(
+                "entry_block_reason", "hedge_timeout_closed",
+            )
+            self._publish_dashboard(
+                worker, ledger, cfg, None, seconds_left=seconds_left, phase=phase,
+            )
+            return
+
         self._ensure_velocity_ws_hooks(worker)
         quotes = self._quotes(worker)
         vel_snap = self._update_velocity(worker)
         vcfg = load_velocity_config(worker.worker_config)
         vel_ctx = vel_snap.context if vel_snap else None
         apply_velocity = bool(vcfg.engine_enabled and vcfg.entry_enabled)
+        hedge_since = self._hedge_timeout_since_mono(worker, ledger, cfg)
+        hedge_locked = self._hedge_locked(worker, ledger)
         action = decide(
             ledger,
             quotes,
@@ -958,6 +1055,9 @@ class InventoryAccumulationStrategy:
             apply_velocity_entry=apply_velocity,
             velocity_initial_override=vcfg.initial_entry_override_enabled,
             velocity_initial_max_price=vcfg.initial_entry_max_price,
+            hedge_timeout_since_mono=hedge_since,
+            hedge_locked=hedge_locked,
+            now_mono=time.monotonic(),
         )
         action = self._paper_block_velocity_live(worker, action, apply_velocity=apply_velocity)
         if vel_snap and vcfg.paper_mode:

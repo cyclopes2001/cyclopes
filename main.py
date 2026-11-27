@@ -2595,8 +2595,9 @@ function _renderPairedTerminalCard(bot){
       </div>
     </div>
     ${_renderOrderBookVelocity(bot)}
-    <div class="pt-2 border-t border-zinc-800 flex justify-between text-[10px] text-zinc-500">
+    <div class="pt-2 border-t border-zinc-800 flex flex-wrap gap-x-3 gap-y-1 justify-between text-[10px] text-zinc-500">
       <span>${bot.dry_run?'PAPER':'LIVE'} · FOK ${Number(bot.order_size||5)} sh</span>
+      <span>Trades ${Number(bot.trade_count)||0} · W ${Number(bot.wins)||0} · L ${Number(bot.losses)||0} · ${Number(bot.win_rate)||0}%</span>
       <span>Cum. $${_fmtMoney(bot.cumulative_pnl||0)}</span>
     </div>
   </div>`;

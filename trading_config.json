@@ -21,6 +21,7 @@
     "paired_stop_initial_entry_seconds": 120,
     "paired_stop_unmatched_dca_seconds": 90,
     "paired_hedge_priority_seconds": 60,
+    "paired_hedge_timeout_seconds": 20,
     "paired_final_risk_seconds": 30,
     "paired_dca_increment": 5,
     "paired_max_dca_legs_per_side": 3,

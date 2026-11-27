@@ -190,6 +190,7 @@ class WorkerConfig:
     paired_initial_entry_threshold: float = 0.35
     paired_initial_entry_direction: str = "CHEAPER_SIDE"
     paired_max_inventory_per_side: float = 15.0
+    paired_hedge_timeout_seconds: float = 20.0
     paired_unmatched_inventory_target: float = 5.0
     paired_dca_increment: float = 5.0
     paired_max_dca_legs_per_side: int = 3
@@ -570,6 +571,11 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
             f"{asset}:{window}: paired_initial_entry_direction must be "
             f"EXPENSIVE_SIDE or CHEAPER_SIDE (got {paired_initial_entry_direction!r})"
         )
+    paired_hedge_timeout_seconds = _parse_nonnegative_float(
+        "paired_hedge_timeout_seconds",
+        _cfg_get(raw, defaults, "paired_hedge_timeout_seconds", default=20.0),
+        20.0,
+    )
     paired_max_inventory_per_side = _parse_max_shares(
         "paired_max_inventory_per_side",
         _cfg_get(raw, defaults, "paired_max_inventory_per_side", "max_shares", default=15.0),
@@ -1475,6 +1481,7 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         paired_initial_entry_threshold=paired_initial_entry_threshold,
         paired_initial_entry_direction=paired_initial_entry_direction,
         paired_max_inventory_per_side=paired_max_inventory_per_side,
+        paired_hedge_timeout_seconds=paired_hedge_timeout_seconds,
         paired_unmatched_inventory_target=paired_unmatched_inventory_target,
         paired_dca_increment=paired_dca_increment,
         paired_max_dca_legs_per_side=paired_max_dca_legs_per_side,

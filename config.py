@@ -204,6 +204,8 @@ class WorkerConfig:
     velocity_entry_enabled: bool = True
     velocity_initial_entry_override_enabled: bool = False
     velocity_initial_entry_max_price: float = 0.90
+    velocity_max_inventory_per_side: float = 15.0
+    velocity_max_unmatched_shares_per_side: float = 15.0
     velocity_paper_mode: bool = True
     velocity_windows_seconds: tuple = (1.0, 3.0, 5.0, 10.0)
     velocity_min_confidence: float = 75.0
@@ -648,6 +650,26 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
             default=0.90,
         ),
         0.90,
+    )
+    velocity_max_inventory_per_side = _parse_max_shares(
+        "velocity_max_inventory_per_side",
+        _cfg_get(
+            raw,
+            defaults,
+            "velocity_max_inventory_per_side",
+            default=15.0,
+        ),
+        15.0,
+    )
+    velocity_max_unmatched_shares_per_side = _parse_max_shares(
+        "velocity_max_unmatched_shares_per_side",
+        _cfg_get(
+            raw,
+            defaults,
+            "velocity_max_unmatched_shares_per_side",
+            default=velocity_max_inventory_per_side,
+        ),
+        velocity_max_inventory_per_side,
     )
     velocity_paper_mode = _parse_bool_value(
         "velocity_paper_mode",
@@ -1494,6 +1516,8 @@ def _merge_worker_entry(raw: dict, defaults: dict) -> WorkerConfig:
         velocity_entry_enabled=velocity_entry_enabled,
         velocity_initial_entry_override_enabled=velocity_initial_entry_override_enabled,
         velocity_initial_entry_max_price=velocity_initial_entry_max_price,
+        velocity_max_inventory_per_side=velocity_max_inventory_per_side,
+        velocity_max_unmatched_shares_per_side=velocity_max_unmatched_shares_per_side,
         velocity_paper_mode=velocity_paper_mode,
         velocity_windows_seconds=velocity_windows_seconds,
         velocity_min_confidence=velocity_min_confidence,

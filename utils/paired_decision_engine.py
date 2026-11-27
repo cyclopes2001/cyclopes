@@ -88,6 +88,8 @@ class PairedStrategyConfig:
     phase_policy: PhasePolicy = PhasePolicy()
     exit_max_loss_fraction: float = 0.35
     hedge_timeout_seconds: float = 20.0
+    velocity_max_inventory_per_side: float = 15.0
+    velocity_max_unmatched_shares_per_side: float = 15.0
     live_trading_enabled: bool = False
 
 
@@ -265,7 +267,30 @@ def _velocity_only_initial_entry_active(
     return _velocity_trade_side(velocity) is not None
 
 
-def _evaluate_velocity_only_initial_entry(
+def evaluate_velocity_accumulation(
+    ledger: PairedInventoryLedger,
+    quotes: MarketQuoteView,
+    cfg: PairedStrategyConfig,
+    *,
+    phase: MarketPhase,
+    velocity: "VelocityContext",
+    velocity_initial_max_price: float,
+) -> Optional[StrategyAction]:
+    """Velocity-driven buys (initial or add-on) using velocity inventory caps, not the 5-share legacy cap."""
+    act = _evaluate_velocity_buy(
+        ledger,
+        quotes,
+        cfg,
+        phase=phase,
+        velocity=velocity,
+        velocity_initial_max_price=velocity_initial_max_price,
+    )
+    if act and act.kind == ActionKind.BUY_ENTRY:
+        return act
+    return act if act and act.kind != ActionKind.BUY_ENTRY else None
+
+
+def _evaluate_velocity_buy(
     ledger: PairedInventoryLedger,
     quotes: MarketQuoteView,
     cfg: PairedStrategyConfig,
@@ -274,8 +299,10 @@ def _evaluate_velocity_only_initial_entry(
     velocity: "VelocityContext",
     velocity_initial_max_price: float,
 ) -> StrategyAction:
-    """Velocity-only first leg: preferred side, no cheaper-side fallback, optional >35¢ cap."""
+    """Velocity-only buy: preferred side, optional >35¢ cap, higher per-side / unmatched limits."""
     max_px = float(velocity_initial_max_price)
+    max_inv = float(cfg.velocity_max_inventory_per_side)
+    max_um = float(cfg.velocity_max_unmatched_shares_per_side)
     side = _velocity_trade_side(velocity)
     if VelocityTradeDecision is not None and velocity.decision == VelocityTradeDecision.WAIT and not side:
         return StrategyAction(
@@ -335,7 +362,37 @@ def _evaluate_velocity_only_initial_entry(
             ),
             phase=phase,
         )
-    headroom = cfg.max_inventory_per_side - ledger.total_shares(side)
+    um_y = ledger.unmatched_shares("YES")
+    um_n = ledger.unmatched_shares("NO")
+    if um_y > _EPS and um_n > _EPS:
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason="WAIT: velocity — both sides have unmatched inventory",
+            phase=phase,
+        )
+    if um_y > _EPS and side == "NO":
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason="WAIT: velocity — open UP exposure; hedge required before adding DOWN",
+            phase=phase,
+        )
+    if um_n > _EPS and side == "YES":
+        return StrategyAction(
+            kind=ActionKind.WAIT,
+            side=None,
+            qty=0.0,
+            limit_price=0.0,
+            reason="WAIT: velocity — open DOWN exposure; hedge required before adding UP",
+            phase=phase,
+        )
+
+    headroom = max_inv - ledger.total_shares(side)
     qty = min(cfg.min_order_size, cfg.dca_increment, depth, headroom)
     if qty + _EPS < cfg.min_order_size:
         return StrategyAction(
@@ -343,7 +400,10 @@ def _evaluate_velocity_only_initial_entry(
             side=side,
             qty=0.0,
             limit_price=ask,
-            reason=f"WAIT: velocity-only — insufficient capacity or depth on {_side_label(side)}",
+            reason=(
+                f"WAIT: velocity — {_side_label(side)} at velocity inventory cap "
+                f"({ledger.total_shares(side):.0f}/{max_inv:.0f} sh)"
+            ),
             phase=phase,
         )
     if depth + _EPS < cfg.min_orderbook_depth:
@@ -358,7 +418,7 @@ def _evaluate_velocity_only_initial_entry(
     um_y, um_n = projected_unmatched(ledger, side, qty)
     if exceeds_unmatched_cap(
         um_y, um_n,
-        max_unmatched_per_side=cfg.max_unmatched_shares_per_side,
+        max_unmatched_per_side=max_um,
         buy_side=side,
     ):
         return StrategyAction(
@@ -366,21 +426,26 @@ def _evaluate_velocity_only_initial_entry(
             side=side,
             qty=0.0,
             limit_price=ask,
-            reason="WAIT: velocity-only — projected unmatched would exceed cap",
+            reason=(
+                f"WAIT: velocity — projected unmatched would exceed velocity cap "
+                f"({max_um:.0f} sh/side)"
+            ),
             phase=phase,
         )
     opp = _opposite_side(side)
     max_up, max_down = max_hedge_prices(ledger, cfg.target_combined_cost)
     max_hedge_opp = max_down if side == "YES" else max_up
+    add_on = ledger.total_shares(side) > _EPS
+    entry_label = "VELOCITY ADD" if add_on else "VELOCITY INITIAL ENTRY"
     return StrategyAction(
         kind=ActionKind.BUY_ENTRY,
         side=side,
         qty=qty,
         limit_price=ask,
         reason=(
-            f"VELOCITY INITIAL ENTRY: {_side_label(side)} at {ask * 100:.1f}¢ "
-            f"(velocity-only, max {max_px * 100:.1f}¢; legacy initial max "
-            f"{cfg.initial_entry_threshold * 100:.0f}¢ not used). "
+            f"{entry_label}: {_side_label(side)} at {ask * 100:.1f}¢ "
+            f"(velocity cap {max_inv:.0f} sh/side, unmatched cap {max_um:.0f}; "
+            f"legacy max {cfg.max_inventory_per_side:.0f} sh N/A). "
             f"State UP={velocity.up.state.value} DOWN={velocity.down.state.value}. "
             f"Monitoring {_side_label(opp)} for qualifying hedge"
             f"{f' (max {_side_label(opp)} ~{max_hedge_opp * 100:.1f}¢)' if max_hedge_opp > _EPS else ''}."
@@ -450,44 +515,8 @@ def evaluate_initial_entry(
     if ledger.unmatched_shares("YES") > _EPS or ledger.unmatched_shares("NO") > _EPS:
         return None  # hedge / DCA path owns unmatched inventory
 
-    velocity_only_mode = bool(apply_velocity_entry and velocity_initial_override)
-
-    if velocity_only_mode:
-        if velocity is None or not velocity.enabled:
-            return StrategyAction(
-                kind=ActionKind.WAIT,
-                side=None,
-                qty=0.0,
-                limit_price=0.0,
-                reason="WAIT: velocity-only initial entry — engine unavailable",
-                phase=phase,
-            )
-        if _velocity_only_initial_entry_active(
-            apply_velocity_entry=apply_velocity_entry,
-            velocity_initial_override=velocity_initial_override,
-            velocity=velocity,
-        ):
-            return _evaluate_velocity_only_initial_entry(
-                ledger,
-                quotes,
-                cfg,
-                phase=phase,
-                velocity=velocity,
-                velocity_initial_max_price=velocity_initial_max_price,
-            )
-        return StrategyAction(
-            kind=ActionKind.WAIT,
-            side=None,
-            qty=0.0,
-            limit_price=0.0,
-            reason=(
-                "WAIT: velocity-only initial entry — signal not ready "
-                f"(stale={velocity.stale}, conf={velocity.confidence:.0f}, "
-                f"decision={getattr(velocity.decision, 'value', velocity.decision)}, "
-                f"pref={_side_label(_velocity_trade_side(velocity) or '') or '—'})"
-            ),
-            phase=phase,
-        )
+    if apply_velocity_entry and velocity_initial_override:
+        return None
 
     candidates = []
     for side, ask, depth in (
@@ -1021,7 +1050,7 @@ def decide(
             max_hedge_down=max_down,
         )
 
-      # 1) Always prioritize a valid hedge when possible.
+    # 1) Always prioritize a valid hedge when possible.
     hedge = evaluate_hedge(ledger, quotes, cfg, phase=phase)
     if hedge and hedge.kind == ActionKind.BUY_HEDGE:
         return hedge
@@ -1047,7 +1076,49 @@ def decide(
         if exit_act and exit_act.kind == ActionKind.EXIT:
             return exit_act
 
-    # 4) Adaptive DCA on heavy side (only if unmatched exists).
+    # 4) Velocity accumulation (uses velocity inventory caps; not limited to 5 sh/side).
+    if (
+        apply_velocity_entry
+        and velocity_initial_override
+        and velocity is not None
+        and velocity.enabled
+    ):
+        if _velocity_only_initial_entry_active(
+            apply_velocity_entry=apply_velocity_entry,
+            velocity_initial_override=velocity_initial_override,
+            velocity=velocity,
+        ):
+            vel_buy = evaluate_velocity_accumulation(
+                ledger,
+                quotes,
+                cfg,
+                phase=phase,
+                velocity=velocity,
+                velocity_initial_max_price=velocity_initial_max_price,
+            )
+            if vel_buy and vel_buy.kind == ActionKind.BUY_ENTRY:
+                return vel_buy
+        elif apply_velocity_entry and velocity_initial_override:
+            if (
+                ledger.unmatched_shares("YES") <= _EPS
+                and ledger.unmatched_shares("NO") <= _EPS
+            ):
+                return StrategyAction(
+                    kind=ActionKind.WAIT,
+                    side=None,
+                    qty=0.0,
+                    limit_price=0.0,
+                    reason=(
+                        "WAIT: velocity accumulation — signal not ready "
+                        f"(stale={velocity.stale}, conf={velocity.confidence:.0f}, "
+                        f"pref={_side_label(_velocity_trade_side(velocity) or '') or '—'})"
+                    ),
+                    phase=phase,
+                    max_hedge_up=max_up,
+                    max_hedge_down=max_down,
+                )
+
+    # 5) Adaptive DCA on heavy side (only if unmatched exists).
     dca = evaluate_dca_action(
         ledger,
         quotes,
@@ -1060,7 +1131,7 @@ def decide(
     if dca and dca.kind == ActionKind.BUY_DCA:
         return dca
 
-    # 5) Initial entry when flat / matched-only.
+    # 6) Initial entry when flat / matched-only (legacy ≤35¢ unless velocity override disabled path).
     entry = evaluate_initial_entry(
         ledger,
         quotes,

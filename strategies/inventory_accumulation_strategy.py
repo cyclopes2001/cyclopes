@@ -117,6 +117,16 @@ def _cfg_from_worker(worker: "MarketWorker") -> PairedStrategyConfig:
         exit_max_loss_fraction=float(getattr(wc, "paired_exit_max_loss_fraction", 0.35)),
         live_trading_enabled=bool(getattr(wc, "paired_live_trading_enabled", False)),
         hedge_timeout_seconds=float(getattr(wc, "paired_hedge_timeout_seconds", 20.0)),
+        velocity_max_inventory_per_side=float(
+            getattr(wc, "velocity_max_inventory_per_side", getattr(wc, "paired_max_inventory_per_side", 15.0))
+        ),
+        velocity_max_unmatched_shares_per_side=float(
+            getattr(
+                wc,
+                "velocity_max_unmatched_shares_per_side",
+                getattr(wc, "velocity_max_inventory_per_side", 15.0),
+            )
+        ),
     )
 
 
@@ -685,9 +695,21 @@ class InventoryAccumulationStrategy:
                 f"paired live trading disabled — decision was: {action.reason}"
             )
             return
-        if ledger.total_shares(side) + action.qty > cfg.max_inventory_per_side + _EPS:
+        is_velocity = "VELOCITY" in (action.reason or "").upper()
+        inv_cap = (
+            cfg.velocity_max_inventory_per_side
+            if is_velocity
+            else cfg.max_inventory_per_side
+        )
+        um_cap = (
+            cfg.velocity_max_unmatched_shares_per_side
+            if is_velocity
+            else cfg.max_unmatched_shares_per_side
+        )
+        if ledger.total_shares(side) + action.qty > inv_cap + _EPS:
             worker.dashboard["latest_decision"] = (
-                f"BUY REJECTED: {side} inventory at hard cap {cfg.max_inventory_per_side}"
+                f"BUY REJECTED: {side} inventory at "
+                f"{'velocity' if is_velocity else 'paired'} cap {inv_cap}"
             )
             return
 
@@ -712,7 +734,7 @@ class InventoryAccumulationStrategy:
         is_hedge = action.kind == ActionKind.BUY_HEDGE
         if not is_hedge and exceeds_unmatched_cap(
             um_y, um_n,
-            max_unmatched_per_side=cfg.max_unmatched_shares_per_side,
+            max_unmatched_per_side=um_cap,
             buy_side=side,
         ):
             worker.dashboard["latest_decision"] = (
